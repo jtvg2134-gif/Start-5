@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Start 5 | Entrar</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-page">
+  <div class="page-shell auth-shell">
+    <main class="auth-stage">
+      <section class="auth-intro">
+        <div class="hero-spotlight auth-spotlight" aria-hidden="true"></div>
+
+        <p class="section-label"></p>
+        <h1 class="brand-hero auth-brand">Start 5</h1>
+        <p class="auth-copy">
+          
+        </p>
+      </section>
+
+      <section class="auth-card">
+        <div class="auth-switch" role="tablist" aria-label="Modo de acesso">
+          <button
+            type="button"
+            class="auth-switch-button is-active"
+            data-auth-view="login"
+            aria-pressed="true"
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            class="auth-switch-button"
+            data-auth-view="register"
+            aria-pressed="false"
+          >
+            Criar conta
+          </button>
+        </div>
+
+        <div class="auth-card-head">
+          <h2 class="auth-title" id="authTitle">Acesse sua conta</h2>
+          <p class="auth-subtitle" id="authSubtitle">
+            
+          </p>
+        </div>
+
+        <form class="auth-form" id="authForm" novalidate>
+          <div class="auth-field is-hidden" id="authNameField">
+            <label for="authNameInput" class="auth-label">Seu nome</label>
+            <input
+              type="text"
+              id="authNameInput"
+              class="auth-input"
+              autocomplete="name"
+              placeholder="Como você quer aparecer"
+            />
+          </div>
+
+          <div class="auth-field">
+            <label for="authEmailInput" class="auth-label">E-mail</label>
+            <input
+              type="email"
+              id="authEmailInput"
+              class="auth-input"
+              autocomplete="email"
+              placeholder="voce@exemplo.com"
+              required
+            />
+          </div>
+
+          <div class="auth-field">
+            <label for="authPasswordInput" class="auth-label">Senha</label>
+            <input
+              type="password"
+              id="authPasswordInput"
+              class="auth-input"
+              autocomplete="current-password"
+              placeholder="Mínimo de 6 caracteres"
+              required
+            />
+          </div>
+
+          <div class="auth-field is-hidden" id="authConfirmField">
+            <label for="authConfirmInput" class="auth-label">Confirmar senha</label>
+            <input
+              type="password"
+              id="authConfirmInput"
+              class="auth-input"
+              autocomplete="new-password"
+              placeholder="Repita sua senha"
+            />
+          </div>
+
+          <p class="auth-feedback" id="authFeedback" aria-live="polite"></p>
+
+          <button type="submit" class="auth-submit" id="authSubmitButton">
+            Entrar
+          </button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>

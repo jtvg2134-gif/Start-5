@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Start 5 | Painel</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="dashboard-page protected-page">
+  <div class="page-shell">
+    <header class="header">
+      <div class="header-inner">
+        <a href="index.html" class="brand-small">Start 5</a>
+
+        <button
+          class="menu-toggle"
+          id="menuToggle"
+          type="button"
+          aria-label="Abrir menu"
+          aria-expanded="false"
+          aria-controls="menuPanel"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <div class="menu-panel" id="menuPanel">
+      <div class="menu-panel-inner">
+        <nav class="menu-nav" aria-label="Navegação principal">
+          <div class="menu-user">
+            <span class="menu-user-label">Conectado como</span>
+            <strong class="menu-user-name" data-auth-name>Usuário</strong>
+            <span class="menu-user-email" data-auth-email>email@start5.app</span>
+          </div>
+
+          <div class="menu-column">
+            <a href="index.html" class="menu-link">Início</a>
+            <a href="#progresso" class="menu-link">Progresso</a>
+          </div>
+
+          <div class="menu-column">
+            <a href="#historico" class="menu-link">Resumo de hoje</a>
+            <a href="#conquistas" class="menu-link">Conquistas</a>
+            <a href="admin.html" class="menu-link" data-admin-only hidden>Admin</a>
+            <button type="button" class="menu-link menu-link-button" data-logout>Sair</button>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <section class="dashboard-intro">
+      <div class="dashboard-intro-inner">
+        <div>
+          <p class="section-label">Painel</p>
+          <h1 class="progress-title">Seu ritmo agora</h1>
+          <p class="dashboard-copy">
+            Veja o que contou hoje, acompanhe sua constância e registre uma nova sessão quando quiser.
+          </p>
+        </div>
+
+        <button class="start-button dashboard-start-button" id="startSessionButton" type="button">
+          Registrar sessão
+        </button>
+      </div>
+    </section>
+
+    <section class="progress-section" id="progresso">
+      <div class="progress-container">
+        <p class="section-label">Progresso</p>
+        <h2 class="progress-title">Seu progresso</h2>
+
+        <div class="progress-panel">
+          <div class="panel-top">
+            <span class="panel-top-label">Análise do dia</span>
+          </div>
+
+          <div class="panel-main">
+            <div class="panel-score">
+              <span class="score-number" id="scoreNumber">229%</span>
+              <span class="score-text">do objetivo de hoje</span>
+            </div>
+
+            <div class="panel-comparison">
+              <div class="comparison-item">
+                <span class="comparison-value" id="vsYesterdayValue">+10,9 min</span>
+                <span class="comparison-label">vs ontem</span>
+              </div>
+
+              <div class="comparison-item">
+                <span class="comparison-value" id="vsMonthValue">+117 min</span>
+                <span class="comparison-label">vs mês anterior</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-bottom">
+            <div class="panel-info">
+              <span class="info-label">Estado</span>
+              <strong class="info-value" id="currentStateValue">Normal</strong>
+            </div>
+
+            <div class="panel-info">
+              <span class="info-label">Meta</span>
+              <strong class="info-value" id="goalValue">10 min</strong>
+            </div>
+
+            <div class="panel-info">
+              <span class="info-label">Feito</span>
+              <strong class="info-value" id="doneValue">22,9 min</strong>
+            </div>
+
+            <div class="panel-info">
+              <span class="info-label">Sequência</span>
+              <strong class="info-value" id="streakValue">4 dias</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="day-history" id="historico">
+      <div class="day-history-head">
+        <h3>Resumo de hoje</h3>
+        <p class="day-history-date" id="todayDateLabel"></p>
+      </div>
+
+      <div class="today-summary">
+        <article class="summary-card">
+          <span class="summary-label">Minutos hoje</span>
+          <strong class="summary-value" id="todayMinutesValue">0 min</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Sessões</span>
+          <strong class="summary-value" id="todayCountValue">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Último estado</span>
+          <strong class="summary-value" id="todayStateValue">Normal</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Média por sessão</span>
+          <strong class="summary-value" id="todayAverageValue">0 min</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Maior sessão</span>
+          <strong class="summary-value" id="todayBestValue">0 min</strong>
+        </article>
+      </div>
+
+      <div class="today-highlight" id="todayHighlight">
+        <strong class="today-highlight-title" id="todayHighlightTitle">
+          Nenhuma sessão registrada hoje.
+        </strong>
+        <p class="today-highlight-text" id="todayHighlightText">
+          Quando você salvar a primeira sessão, este bloco mostra o ritmo do dia, a melhor sessão e a distância até a meta.
+        </p>
+      </div>
+
+      <div class="today-sessions-list" id="todaySessionsList">
+        <div class="session-empty">
+          Você ainda não registrou nenhuma sessão hoje.
+        </div>
+      </div>
+    </section>
+
+    <section class="achievements-section" id="conquistas">
+      <div class="achievements-container">
+        <p class="section-label">Conquistas</p>
+        <h2 class="achievements-title">Sua medalha do mês</h2>
+        <p class="achievements-subtitle" id="achievementsSubtitle"></p>
+
+        <div class="achievements-grid">
+          <article class="medal-card active-medal" id="currentMedalCard">
+            <span class="medal-badge" id="currentMedalBadge">Atual</span>
+            <h3 class="medal-name" id="currentMedalName">Prata</h3>
+            <p class="medal-minutes" id="currentMedalMinutes">627 min acumulados</p>
+            <p class="medal-target" id="currentMedalTarget">Meta da medalha: 300 min</p>
+            <p class="medal-extra" id="currentMedalExtra">+27 min acima da meta</p>
+          </article>
+
+          <article class="medal-card bronze" data-medal="bronze">
+            <span class="medal-status"></span>
+            <h3 class="medal-name">Bronze</h3>
+            <p class="medal-minutes">150 min no mês</p>
+            <p class="medal-target">Primeiro nível de constância</p>
+          </article>
+
+          <article class="medal-card silver" data-medal="silver">
+            <span class="medal-status"></span>
+            <h3 class="medal-name">Prata</h3>
+            <p class="medal-minutes">300 min no mês</p>
+            <p class="medal-target">Ritmo consistente</p>
+          </article>
+
+          <article class="medal-card gold" data-medal="gold">
+            <span class="medal-status"></span>
+            <h3 class="medal-name">Ouro</h3>
+            <p class="medal-minutes">600 min no mês</p>
+            <p class="medal-target">Constância acima da média</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="support-copy"></div>
+  </div>
+
+  <div class="modal-backdrop" id="sessionModalBackdrop" aria-hidden="true">
+    <div
+      class="session-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sessionModalTitle"
+    >
+      <button
+        class="modal-close"
+        type="button"
+        data-close-session-modal
+        aria-label="Fechar modal"
+      >
+        ×
+      </button>
+
+      <h2 class="session-modal-title" id="sessionModalTitle">
+        Registrar seu Start 5
+      </h2>
+
+      <div class="modal-group">
+        <span class="modal-group-label">Seu dia</span>
+
+        <div class="modal-options state-options">
+          <button type="button" class="option-pill" data-state="cansado">Cansado</button>
+          <button type="button" class="option-pill" data-state="normal">Normal</button>
+          <button type="button" class="option-pill" data-state="focado">Focado</button>
+        </div>
+      </div>
+
+      <div class="modal-group">
+        <span class="modal-group-label">Tempo</span>
+
+        <div class="modal-options duration-options">
+          <button type="button" class="option-pill" data-duration="10">10 min</button>
+          <button type="button" class="option-pill" data-duration="15">15 min</button>
+          <button type="button" class="option-pill" data-duration="20">20 min</button>
+          <button type="button" class="option-pill" data-duration="extra">Horas extras</button>
+        </div>
+
+        <div class="extra-minutes-box" id="extraMinutesBox">
+          <label for="extraMinutesInput" class="extra-minutes-label">
+            Acima de 20 min
+          </label>
+          <input
+            type="number"
+            id="extraMinutesInput"
+            class="extra-minutes-input"
+            min="21"
+            step="1"
+            placeholder="Ex: 35"
+          />
+        </div>
+      </div>
+
+      <p class="session-helper" id="sessionHelper">Escolha seu dia.</p>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="modal-button modal-button-secondary"
+          data-close-session-modal
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="modal-button modal-button-primary"
+          id="saveSessionButton"
+        >
+          Salvar sessão
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Start 5</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="home-page protected-page">
+  <div class="page-shell landing-shell">
+    <header class="header">
+      <div class="header-inner">
+        <a href="index.html" class="brand-small">Start 5</a>
+
+        <button
+          class="menu-toggle"
+          id="menuToggle"
+          type="button"
+          aria-label="Abrir menu"
+          aria-expanded="false"
+          aria-controls="menuPanel"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <div class="menu-panel" id="menuPanel">
+      <div class="menu-panel-inner">
+        <nav class="menu-nav" aria-label="Navegação principal">
+          <div class="menu-user">
+            <span class="menu-user-label">Conectado como</span>
+            <strong class="menu-user-name" data-auth-name>Usuário</strong>
+            <span class="menu-user-email" data-auth-email>email@start5.app</span>
+          </div>
+
+          <div class="menu-column">
+            <a href="index.html" class="menu-link">Início</a>
+            <a href="dashboard.html" class="menu-link">Painel</a>
+          </div>
+
+          <div class="menu-column">
+            <a href="dashboard.html#historico" class="menu-link">Resumo de hoje</a>
+            <a href="dashboard.html#conquistas" class="menu-link">Conquistas</a>
+            <a href="admin.html" class="menu-link" data-admin-only hidden>Admin</a>
+            <button type="button" class="menu-link menu-link-button" data-logout>Sair</button>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <main class="hero landing-hero">
+      <div class="hero-spotlight" aria-hidden="true"></div>
+
+      <div class="hero-inner landing-hero-inner">
+        <h1 class="brand-hero">Start 5</h1>
+        <p class="tagline">Antes tarde, do que mais tarde</p>
+
+        <div class="hero-actions">
+          <button class="start-button" id="startSessionButton" type="button">
+            Começar
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <div class="support-copy"></div>
+  </div>
+
+  <div class="modal-backdrop" id="sessionModalBackdrop" aria-hidden="true">
+    <div
+      class="session-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sessionModalTitle"
+    >
+      <button
+        class="modal-close"
+        type="button"
+        data-close-session-modal
+        aria-label="Fechar modal"
+      >
+        ×
+      </button>
+
+      <h2 class="session-modal-title" id="sessionModalTitle">
+        Registrar seu Start 5
+      </h2>
+
+      <div class="modal-group">
+        <span class="modal-group-label">Seu dia</span>
+
+        <div class="modal-options state-options">
+          <button type="button" class="option-pill" data-state="cansado">Cansado</button>
+          <button type="button" class="option-pill" data-state="normal">Normal</button>
+          <button type="button" class="option-pill" data-state="focado">Focado</button>
+        </div>
+      </div>
+
+      <div class="modal-group">
+        <span class="modal-group-label">Tempo</span>
+
+        <div class="modal-options duration-options">
+          <button type="button" class="option-pill" data-duration="10">10 min</button>
+          <button type="button" class="option-pill" data-duration="15">15 min</button>
+          <button type="button" class="option-pill" data-duration="20">20 min</button>
+          <button type="button" class="option-pill" data-duration="extra">Horas extras</button>
+        </div>
+
+        <div class="extra-minutes-box" id="extraMinutesBox">
+          <label for="extraMinutesInput" class="extra-minutes-label">
+            Acima de 20 min
+          </label>
+          <input
+            type="number"
+            id="extraMinutesInput"
+            class="extra-minutes-input"
+            min="21"
+            step="1"
+            placeholder="Ex: 35"
+          />
+        </div>
+      </div>
+
+      <p class="session-helper" id="sessionHelper">Escolha seu dia.</p>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="modal-button modal-button-secondary"
+          data-close-session-modal
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="modal-button modal-button-primary"
+          id="saveSessionButton"
+        >
+          Salvar sessão
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

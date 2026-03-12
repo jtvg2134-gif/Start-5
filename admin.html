@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Start 5 | Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="dashboard-page protected-page">
+  <div class="page-shell">
+    <header class="header">
+      <div class="header-inner">
+        <a href="index.html" class="brand-small">Start 5</a>
+
+        <button
+          class="menu-toggle"
+          id="menuToggle"
+          type="button"
+          aria-label="Abrir menu"
+          aria-expanded="false"
+          aria-controls="menuPanel"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <div class="menu-panel" id="menuPanel">
+      <div class="menu-panel-inner">
+        <nav class="menu-nav" aria-label="Navegação principal">
+          <div class="menu-user">
+            <span class="menu-user-label">Conectado como</span>
+            <strong class="menu-user-name" data-auth-name>Usuário</strong>
+            <span class="menu-user-email" data-auth-email>email@start5.app</span>
+          </div>
+
+          <div class="menu-column">
+            <a href="index.html" class="menu-link">Início</a>
+            <a href="dashboard.html" class="menu-link">Painel</a>
+          </div>
+
+          <div class="menu-column">
+            <a href="admin.html" class="menu-link">Admin</a>
+            <button type="button" class="menu-link menu-link-button" data-logout>Sair</button>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <section class="dashboard-intro">
+      <div class="dashboard-intro-inner">
+        <div>
+          <p class="section-label">Admin</p>
+          <h1 class="progress-title">Visão geral do site</h1>
+          <p class="dashboard-copy">
+            Acompanhe crescimento, contas e uso do Start 5 sem expor detalhes sensíveis além do necessário.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="admin-grid" id="adminOverviewGrid">
+        <article class="summary-card">
+          <span class="summary-label">Usuários</span>
+          <strong class="summary-value" id="adminUsersValue">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Admins</span>
+          <strong class="summary-value" id="adminAdminsValue">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Sessões</span>
+          <strong class="summary-value" id="adminSessionsValue">0</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Minutos totais</span>
+          <strong class="summary-value" id="adminMinutesValue">0 min</strong>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-label">Usuários ativos</span>
+          <strong class="summary-value" id="adminActiveUsersValue">0</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="admin-panel">
+        <div class="day-history-head">
+          <h3>Usuários do site</h3>
+          <p class="day-history-date">Visão agregada para manter privacidade.</p>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Conta</th>
+                <th>Perfil</th>
+                <th>Sessões</th>
+                <th>Minutos</th>
+                <th>Última sessão</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTableBody">
+              <tr>
+                <td colspan="6" class="admin-empty">Carregando dados do admin...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="support-copy"></div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
