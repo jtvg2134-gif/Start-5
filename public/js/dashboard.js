@@ -75,6 +75,10 @@ const weeklyActivityChart = document.getElementById("weeklyActivityChart");
 const weeklyDailyChart = document.getElementById("weeklyDailyChart");
 const weeklyActivityList = document.getElementById("weeklyActivityList");
 const weeklyVerbList = document.getElementById("weeklyVerbList");
+const weeklyEssayAverageValue = document.getElementById("weeklyEssayAverageValue");
+const weeklyEssayLatestValue = document.getElementById("weeklyEssayLatestValue");
+const weeklyEssayList = document.getElementById("weeklyEssayList");
+const weeklyEssayCompetencyList = document.getElementById("weeklyEssayCompetencyList");
 
 const monthlyMinutesValue = document.getElementById("monthlyMinutesValue");
 const monthlyDaysValue = document.getElementById("monthlyDaysValue");
@@ -86,6 +90,10 @@ const monthlyActivityChart = document.getElementById("monthlyActivityChart");
 const monthlyWeekChart = document.getElementById("monthlyWeekChart");
 const monthlyActivityList = document.getElementById("monthlyActivityList");
 const monthlyVerbList = document.getElementById("monthlyVerbList");
+const monthlyEssayAverageValue = document.getElementById("monthlyEssayAverageValue");
+const monthlyEssayLatestValue = document.getElementById("monthlyEssayLatestValue");
+const monthlyEssayList = document.getElementById("monthlyEssayList");
+const monthlyEssayCompetencyList = document.getElementById("monthlyEssayCompetencyList");
 
 const DAILY_GOALS = {
   cansado: 10,
@@ -275,8 +283,16 @@ const COMMON_ENGLISH_VERBS = [
   "join",
 ];
 const COMMON_ENGLISH_VERB_SET = new Set(COMMON_ENGLISH_VERBS);
+const ESSAY_COMPETENCY_DEFINITIONS = [
+  { id: 1, shortLabel: "C1", label: "Norma padr\u00e3o" },
+  { id: 2, shortLabel: "C2", label: "Tema" },
+  { id: 3, shortLabel: "C3", label: "Argumenta\u00e7\u00e3o" },
+  { id: 4, shortLabel: "C4", label: "Coes\u00e3o" },
+  { id: 5, shortLabel: "C5", label: "Interven\u00e7\u00e3o" },
+];
 
 let sessions = [];
+let essaySubmissions = [];
 let selectedState = "normal";
 let selectedDuration = AUTO_DURATION_BY_STATE.normal;
 let selectedSubjectKey = DEFAULT_SUBJECT_KEY;
@@ -375,6 +391,29 @@ function formatTime(value) {
   return date.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function getEssayReferenceDate(submission) {
+  const directDate = new Date(submission?.evaluatedAt || submission?.createdAt || "");
+  return isValidDate(directDate) ? directDate : null;
+}
+
+function formatEssayScore(value) {
+  const safeValue = Math.round(Number(value) || 0);
+  return `${new Intl.NumberFormat("pt-BR").format(safeValue)} pts`;
+}
+
+function formatEssayDate(value) {
+  const date = new Date(value || "");
+
+  if (!isValidDate(date)) {
+    return "Sem data";
+  }
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
   });
 }
 
@@ -756,6 +795,72 @@ function getCurrentMonthSessions() {
   return getSessionsBetween(toDateKey(startOfMonth(today)), toDateKey(endOfMonth(today)));
 }
 
+function getEvaluatedEssaySubmissions() {
+  return essaySubmissions.filter((submission) => submission?.status === "evaluated");
+}
+
+function sortEssaySubmissionsByDate(list) {
+  return [...list].sort((left, right) => {
+    const leftTime = getEssayReferenceDate(left)?.getTime() || 0;
+    const rightTime = getEssayReferenceDate(right)?.getTime() || 0;
+    return rightTime - leftTime;
+  });
+}
+
+function getCurrentWeekEssaySubmissions() {
+  const today = new Date();
+  const weekStart = startOfWeek(today);
+  const weekEnd = endOfWeek(today);
+
+  return sortEssaySubmissionsByDate(
+    getEvaluatedEssaySubmissions().filter((submission) => {
+      const essayDate = getEssayReferenceDate(submission);
+      return isValidDate(essayDate) && essayDate >= weekStart && essayDate <= weekEnd;
+    })
+  );
+}
+
+function getPreviousWeekEssaySubmissions() {
+  const today = new Date();
+  const currentWeekStart = startOfWeek(today);
+  const previousWeekStart = shiftDate(currentWeekStart, -7);
+  const previousWeekEnd = shiftDate(currentWeekStart, -1);
+
+  return sortEssaySubmissionsByDate(
+    getEvaluatedEssaySubmissions().filter((submission) => {
+      const essayDate = getEssayReferenceDate(submission);
+      return isValidDate(essayDate) && essayDate >= previousWeekStart && essayDate <= previousWeekEnd;
+    })
+  );
+}
+
+function getCurrentMonthEssaySubmissions() {
+  const today = new Date();
+  const monthStart = startOfMonth(today);
+  const monthEnd = endOfMonth(today);
+
+  return sortEssaySubmissionsByDate(
+    getEvaluatedEssaySubmissions().filter((submission) => {
+      const essayDate = getEssayReferenceDate(submission);
+      return isValidDate(essayDate) && essayDate >= monthStart && essayDate <= monthEnd;
+    })
+  );
+}
+
+function getPreviousMonthEssaySubmissions() {
+  const today = new Date();
+  const previousMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 15, 12, 0, 0, 0);
+  const monthStart = startOfMonth(previousMonthDate);
+  const monthEnd = endOfMonth(previousMonthDate);
+
+  return sortEssaySubmissionsByDate(
+    getEvaluatedEssaySubmissions().filter((submission) => {
+      const essayDate = getEssayReferenceDate(submission);
+      return isValidDate(essayDate) && essayDate >= monthStart && essayDate <= monthEnd;
+    })
+  );
+}
+
 function getCurrentState(list = sessions) {
   return sortSessionsByStartDesc(list)[0]?.state || "normal";
 }
@@ -874,6 +979,64 @@ function buildWordStats(words) {
       if (right.count !== left.count) return right.count - left.count;
       return left.word.localeCompare(right.word);
     });
+}
+
+function buildEssayCompetencyStats(list) {
+  if (!list.length) {
+    return [];
+  }
+
+  const totals = ESSAY_COMPETENCY_DEFINITIONS.map((definition) => ({
+    ...definition,
+    total: 0,
+    count: 0,
+  }));
+
+  list.forEach((submission) => {
+    totals.forEach((item) => {
+      const score = Number(submission?.scores?.[`competency${item.id}`]) || 0;
+      item.total += score;
+      item.count += 1;
+    });
+  });
+
+  return totals
+    .map((item) => ({
+      ...item,
+      average: item.count ? roundOne(item.total / item.count) : 0,
+    }))
+    .sort((left, right) => {
+      if (right.average !== left.average) return right.average - left.average;
+      return left.id - right.id;
+    });
+}
+
+function getEssayAverageScore(list) {
+  if (!list.length) {
+    return 0;
+  }
+
+  return roundOne(
+    list.reduce((total, submission) => total + (Number(submission?.totalScore) || 0), 0) / list.length
+  );
+}
+
+function describeEssayComparison(currentAverage, previousAverage, periodLabel) {
+  if (!previousAverage) {
+    return `Sua m\u00e9dia de reda\u00e7\u00e3o ficou em ${formatEssayScore(currentAverage)} ${periodLabel}.`;
+  }
+
+  const difference = roundOne(currentAverage - previousAverage);
+
+  if (difference === 0) {
+    return `Sua m\u00e9dia de reda\u00e7\u00e3o repetiu ${formatEssayScore(currentAverage)} ${periodLabel}.`;
+  }
+
+  if (difference > 0) {
+    return `Sua m\u00e9dia de reda\u00e7\u00e3o subiu ${formatEssayScore(difference)} ${periodLabel}.`;
+  }
+
+  return `Sua m\u00e9dia de reda\u00e7\u00e3o caiu ${formatEssayScore(Math.abs(difference))} ${periodLabel}.`;
 }
 
 function findActivityStat(stats, key) {
@@ -1199,6 +1362,62 @@ function renderActivityRows(container, stats, emptyMessage) {
   });
 }
 
+function renderEssayRows(container, essays, emptyMessage) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (!essays.length) {
+    container.appendChild(createEmptyMessage(emptyMessage));
+    return;
+  }
+
+  essays.slice(0, 6).forEach((submission) => {
+    const referenceDate = getEssayReferenceDate(submission);
+    const subtitle = `${formatEssayDate(referenceDate)} | ${submission.wordCount || 0} palavras`;
+    container.appendChild(
+      createListRow(
+        submission.themeTitle || "Reda\u00e7\u00e3o",
+        subtitle,
+        formatEssayScore(submission.totalScore)
+      )
+    );
+  });
+}
+
+function renderEssayCompetencyRows(container, stats, emptyMessage) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (!stats.length) {
+    container.appendChild(createEmptyMessage(emptyMessage));
+    return;
+  }
+
+  stats.forEach((item, index) => {
+    const isStrongest = index === 0;
+    const isWeakest = index === stats.length - 1;
+    const subtitle = isStrongest
+      ? "Compet\u00eancia mais forte neste recorte"
+      : isWeakest
+        ? "Compet\u00eancia que mais pede aten\u00e7\u00e3o"
+        : "M\u00e9dia das reda\u00e7\u00f5es corrigidas";
+
+    container.appendChild(
+      createListRow(
+        `${item.shortLabel} | ${item.label}`,
+        subtitle,
+        formatEssayScore(item.average)
+      )
+    );
+  });
+}
+
 function renderDonutChart(container, stats, totalMinutes, emptyMessage) {
   if (!container) {
     return;
@@ -1473,6 +1692,13 @@ async function loadSessionsFromApi() {
   sessions = sortSessionsByStartDesc(nextSessions.map((session) => normalizeSession(session)));
   updateSubjectSelectionUI();
   renderCustomSubjectSuggestions();
+}
+
+async function loadEssaySubmissionsFromApi() {
+  const response = await window.Start5Auth.apiRequest("/api/essay/submissions");
+  essaySubmissions = sortEssaySubmissionsByDate(
+    Array.isArray(response?.submissions) ? response.submissions : []
+  );
 }
 
 function openMenu() {
@@ -2417,11 +2643,19 @@ function renderWeeklyAnalysis() {
   }
 
   const weeklySessions = getCurrentWeekSessions();
+  const weeklyEssays = getCurrentWeekEssaySubmissions();
+  const previousWeeklyEssays = getPreviousWeekEssaySubmissions();
   const weeklyMinutes = sumMinutes(weeklySessions);
   const activeDays = countActiveDays(weeklySessions);
   const subjectStats = buildSubjectStats(weeklySessions);
   const verbStats = buildWordStats(getVerbsFromSessions(weeklySessions));
   const topicHighlights = getRecentTopics(weeklySessions, 3);
+  const weeklyEssayAverage = getEssayAverageScore(weeklyEssays);
+  const previousWeeklyEssayAverage = getEssayAverageScore(previousWeeklyEssays);
+  const weeklyEssayLatest = weeklyEssays[0] || null;
+  const weeklyCompetencyStats = buildEssayCompetencyStats(weeklyEssays);
+  const weeklyStrongestCompetency = weeklyCompetencyStats[0] || null;
+  const weeklyWeakestCompetency = weeklyCompetencyStats[weeklyCompetencyStats.length - 1] || null;
   const topSubject = subjectStats[0];
   const runnerUp = subjectStats[1];
   const comparison = weeklyMinutes - sumMinutes(getPreviousWeekSessions());
@@ -2432,11 +2666,31 @@ function renderWeeklyAnalysis() {
   weeklyDaysValue.textContent = String(activeDays);
   weeklyTopActivityValue.textContent = topSubject?.label || "Nenhuma";
   weeklyPhraseCountValue.textContent = topicHighlights[0] || "Nenhum";
+  if (weeklyEssayAverageValue) {
+    weeklyEssayAverageValue.textContent = weeklyEssays.length ? formatEssayScore(weeklyEssayAverage) : "Sem nota";
+  }
+  if (weeklyEssayLatestValue) {
+    weeklyEssayLatestValue.textContent = weeklyEssayLatest
+      ? formatEssayScore(weeklyEssayLatest.totalScore)
+      : "Sem redação";
+  }
 
-  if (!weeklySessions.length) {
+  if (!weeklySessions.length && !weeklyEssays.length) {
     weeklyInsightTitle.textContent = "Ainda n\u00e3o h\u00e1 dados suficientes nesta semana.";
     weeklyInsightText.textContent =
       "Conforme voc\u00ea registrar sess\u00f5es, o painel semanal vai destacar a mat\u00e9ria dominante, os temas mais recentes e o peso da sua mat\u00e9ria foco.";
+  } else if (!weeklySessions.length) {
+    const latestEssayText = weeklyEssayLatest
+      ? `Última nota: ${formatEssayScore(weeklyEssayLatest.totalScore)}.`
+      : "";
+    const competencyText = weeklyCompetencyStats.length
+      ? `Mais forte: ${weeklyStrongestCompetency?.shortLabel || "C1"} | ${weeklyStrongestCompetency?.label || "Norma padrão"}. Mais difícil: ${weeklyWeakestCompetency?.shortLabel || "C5"} | ${weeklyWeakestCompetency?.label || "Intervenção"}.`
+      : "";
+
+    weeklyInsightTitle.textContent =
+      `Nesta semana você corrigiu ${weeklyEssays.length} redação${weeklyEssays.length === 1 ? "" : "ões"}.`;
+    weeklyInsightText.textContent =
+      `${describeEssayComparison(weeklyEssayAverage, previousWeeklyEssayAverage, "nesta semana")} ${latestEssayText} ${competencyText}`.trim();
   } else {
     const comparisonText =
       comparison === 0
@@ -2456,11 +2710,14 @@ function renderWeeklyAnalysis() {
     const topicText = topicHighlights.length
       ? `Temas recentes: ${formatCompactList(topicHighlights, 3)}.`
       : "";
+    const essayText = weeklyEssays.length
+      ? `${describeEssayComparison(weeklyEssayAverage, previousWeeklyEssayAverage, "nesta semana")} ${weeklyEssays.length} redação${weeklyEssays.length === 1 ? "" : "ões"} corrigida${weeklyEssays.length === 1 ? "" : "s"}. Última nota: ${formatEssayScore(weeklyEssayLatest?.totalScore || 0)}. Mais forte: ${weeklyStrongestCompetency?.shortLabel || "C1"} | ${weeklyStrongestCompetency?.label || "Norma padrão"}. Mais difícil: ${weeklyWeakestCompetency?.shortLabel || "C5"} | ${weeklyWeakestCompetency?.label || "Intervenção"}.`
+      : "Nenhuma redação corrigida nesta semana.";
 
     weeklyInsightTitle.textContent =
       `Nesta semana voc\u00ea estudou em ${activeDays} dia${activeDays === 1 ? "" : "s"} e somou ${formatMinutesOnly(weeklyMinutes)}.`;
     weeklyInsightText.textContent =
-      `${weeklyLeadText} O Start 5 registrou ${comparisonText}. ${focusText} ${topicText} ${weeklyVerbText}`;
+      `${weeklyLeadText} O Start 5 registrou ${comparisonText}. ${focusText} ${topicText} ${weeklyVerbText} ${essayText}`;
   }
 
   renderDonutChart(
@@ -2487,6 +2744,18 @@ function renderWeeklyAnalysis() {
     verbStats.map((item) => createDetailChip(item.word, `${item.count}x`)),
     "Nenhum verbo do ingl\u00eas registrado nesta semana."
   );
+
+  renderEssayRows(
+    weeklyEssayList,
+    weeklyEssays,
+    "Nenhuma redação corrigida nesta semana."
+  );
+
+  renderEssayCompetencyRows(
+    weeklyEssayCompetencyList,
+    weeklyCompetencyStats,
+    "Nenhuma competência avaliada nesta semana."
+  );
 }
 
 function renderMonthlyAnalysis() {
@@ -2495,11 +2764,19 @@ function renderMonthlyAnalysis() {
   }
 
   const monthlySessions = getCurrentMonthSessions();
+  const monthlyEssays = getCurrentMonthEssaySubmissions();
+  const previousMonthEssays = getPreviousMonthEssaySubmissions();
   const monthlyMinutes = sumMinutes(monthlySessions);
   const activeDays = countActiveDays(monthlySessions);
   const subjectStats = buildSubjectStats(monthlySessions);
   const verbStats = buildWordStats(getVerbsFromSessions(monthlySessions));
   const topicHighlights = getRecentTopics(monthlySessions, 3);
+  const monthlyEssayAverage = getEssayAverageScore(monthlyEssays);
+  const previousMonthEssayAverage = getEssayAverageScore(previousMonthEssays);
+  const monthlyEssayLatest = monthlyEssays[0] || null;
+  const monthlyCompetencyStats = buildEssayCompetencyStats(monthlyEssays);
+  const monthlyStrongestCompetency = monthlyCompetencyStats[0] || null;
+  const monthlyWeakestCompetency = monthlyCompetencyStats[monthlyCompetencyStats.length - 1] || null;
   const topSubject = subjectStats[0];
   const focusSessions = getFocusSubjectSessions(monthlySessions);
   const focusSubject = getFocusSubjectConfig();
@@ -2508,11 +2785,31 @@ function renderMonthlyAnalysis() {
   monthlyDaysValue.textContent = String(activeDays);
   monthlyTopActivityValue.textContent = topSubject?.label || "Nenhuma";
   monthlyPhraseCountValue.textContent = topicHighlights[0] || "Nenhum";
+  if (monthlyEssayAverageValue) {
+    monthlyEssayAverageValue.textContent = monthlyEssays.length ? formatEssayScore(monthlyEssayAverage) : "Sem nota";
+  }
+  if (monthlyEssayLatestValue) {
+    monthlyEssayLatestValue.textContent = monthlyEssayLatest
+      ? formatEssayScore(monthlyEssayLatest.totalScore)
+      : "Sem redação";
+  }
 
-  if (!monthlySessions.length) {
+  if (!monthlySessions.length && !monthlyEssays.length) {
     monthlyInsightTitle.textContent = "Ainda n\u00e3o h\u00e1 dados suficientes neste m\u00eas.";
     monthlyInsightText.textContent =
       "O Start 5 vai mostrar quais mat\u00e9rias dominaram o m\u00eas, quais temas apareceram mais e como sua mat\u00e9ria foco est\u00e1 caminhando.";
+  } else if (!monthlySessions.length) {
+    const latestEssayText = monthlyEssayLatest
+      ? `Última nota: ${formatEssayScore(monthlyEssayLatest.totalScore)}.`
+      : "";
+    const competencyText = monthlyCompetencyStats.length
+      ? `Mais forte: ${monthlyStrongestCompetency?.shortLabel || "C1"} | ${monthlyStrongestCompetency?.label || "Norma padrão"}. Mais difícil: ${monthlyWeakestCompetency?.shortLabel || "C5"} | ${monthlyWeakestCompetency?.label || "Intervenção"}.`
+      : "";
+
+    monthlyInsightTitle.textContent =
+      `Neste mês você corrigiu ${monthlyEssays.length} redação${monthlyEssays.length === 1 ? "" : "ões"}.`;
+    monthlyInsightText.textContent =
+      `${describeEssayComparison(monthlyEssayAverage, previousMonthEssayAverage, "neste mês")} ${latestEssayText} ${competencyText}`.trim();
   } else {
     const runnerUp = subjectStats[1];
     const monthlyVerbText = verbStats.length
@@ -2527,10 +2824,13 @@ function renderMonthlyAnalysis() {
     const topicText = topicHighlights.length
       ? `Temas em alta: ${formatCompactList(topicHighlights, 3)}.`
       : "";
+    const essayText = monthlyEssays.length
+      ? `${describeEssayComparison(monthlyEssayAverage, previousMonthEssayAverage, "neste mês")} ${monthlyEssays.length} redação${monthlyEssays.length === 1 ? "" : "ões"} corrigida${monthlyEssays.length === 1 ? "" : "s"}. Última nota: ${formatEssayScore(monthlyEssayLatest?.totalScore || 0)}. Mais forte: ${monthlyStrongestCompetency?.shortLabel || "C1"} | ${monthlyStrongestCompetency?.label || "Norma padrão"}. Mais difícil: ${monthlyWeakestCompetency?.shortLabel || "C5"} | ${monthlyWeakestCompetency?.label || "Intervenção"}.`
+      : "Nenhuma redação corrigida neste mês.";
 
     monthlyInsightTitle.textContent =
       `Neste m\u00eas voc\u00ea somou ${formatMinutesOnly(monthlyMinutes)} em ${activeDays} dia${activeDays === 1 ? "" : "s"} ativo${activeDays === 1 ? "" : "s"}.`;
-    monthlyInsightText.textContent = `${monthlyLeadText} ${focusText} ${topicText} ${monthlyVerbText}`;
+    monthlyInsightText.textContent = `${monthlyLeadText} ${focusText} ${topicText} ${monthlyVerbText} ${essayText}`;
   }
 
   renderDonutChart(
@@ -2556,6 +2856,18 @@ function renderMonthlyAnalysis() {
     monthlyVerbList,
     verbStats.map((item) => createDetailChip(item.word, `${item.count}x`)),
     "Nenhum verbo do ingl\u00eas registrado neste m\u00eas."
+  );
+
+  renderEssayRows(
+    monthlyEssayList,
+    monthlyEssays,
+    "Nenhuma redação corrigida neste mês."
+  );
+
+  renderEssayCompetencyRows(
+    monthlyEssayCompetencyList,
+    monthlyCompetencyStats,
+    "Nenhuma competência avaliada neste mês."
   );
 }
 
@@ -2835,6 +3147,7 @@ async function initializeApp() {
 
   await importLegacySessionsIfNeeded();
   await loadSessionsFromApi();
+  await loadEssaySubmissionsFromApi();
   renderDashboard();
 }
 

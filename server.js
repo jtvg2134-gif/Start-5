@@ -1524,8 +1524,8 @@ function normalizeEssayPayload(payload) {
       throw createError(400, "Informe um titulo claro para o tema livre.");
     }
 
-    if (themePrompt.length < 16) {
-      throw createError(400, "Explique melhor o recorte do tema livre.");
+    if (!themePrompt) {
+      themePrompt = themeTitle;
     }
   }
 

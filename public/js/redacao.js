@@ -16,6 +16,9 @@ const customThemeFields = document.getElementById("customThemeFields");
 const essayCustomThemeTitle = document.getElementById("essayCustomThemeTitle");
 const essayCustomThemePrompt = document.getElementById("essayCustomThemePrompt");
 const essayHistoryList = document.getElementById("essayHistoryList");
+const essayHistoryToggle = document.getElementById("essayHistoryToggle");
+const essayHistoryToggleCount = document.getElementById("essayHistoryToggleCount");
+const essayHistoryDrawer = document.getElementById("essayHistoryDrawer");
 const essayResultTitle = document.getElementById("essayResultTitle");
 const essayStatusChip = document.getElementById("essayStatusChip");
 const essayScorePill = document.getElementById("essayScorePill");
@@ -28,6 +31,7 @@ let presetThemes = [];
 let submissions = [];
 let currentSubmission = null;
 let selectedSubmissionId = null;
+let isHistoryOpen = false;
 
 const COMPETENCY_GUIDE = {
   1: {
@@ -83,6 +87,21 @@ function setFeedback(message, state = "") {
   if (!essayFeedback) return;
   essayFeedback.textContent = message;
   essayFeedback.dataset.state = state;
+}
+
+function updateHistoryToggle() {
+  if (essayHistoryToggle) {
+    essayHistoryToggle.setAttribute("aria-expanded", String(isHistoryOpen));
+  }
+
+  if (essayHistoryDrawer) {
+    essayHistoryDrawer.classList.toggle("is-hidden", !isHistoryOpen);
+  }
+}
+
+function toggleHistoryDrawer(forceValue) {
+  isHistoryOpen = typeof forceValue === "boolean" ? forceValue : !isHistoryOpen;
+  updateHistoryToggle();
 }
 
 function formatNumber(value) {
@@ -354,13 +373,12 @@ function renderThemePreview() {
 
   if (themeMode === "custom") {
     const title = essayCustomThemeTitle?.value.trim() || "Tema livre";
-    const prompt = essayCustomThemePrompt?.value.trim() || "Explique aqui o recorte que voc\u00ea quer trabalhar.";
-    essayThemePreview.textContent = `${title}: ${prompt}`;
+    essayThemePreview.textContent = title;
     return;
   }
 
   const theme = getThemeByKey(essayThemeSelect?.value);
-  essayThemePreview.textContent = theme?.prompt || "Escolha um tema para ver o recorte completo.";
+  essayThemePreview.textContent = theme?.title || "Escolha um tema.";
 }
 
 function setLoading(isLoading) {
@@ -454,7 +472,7 @@ function renderSubmission(submission) {
         "Pr\u00f3ximo passo",
         [
           "Use o bot\u00e3o abaixo para carregar o mesmo texto novamente.",
-          "Confira se o tema e o recorte est\u00e3o claros antes de reenviar.",
+          "Confira se o tema est\u00e1 claro antes de reenviar.",
         ],
         "Nenhuma orienta\u00e7\u00e3o adicional."
       )
@@ -556,6 +574,10 @@ function renderHistory() {
 
   essayHistoryList.replaceChildren();
 
+  if (essayHistoryToggleCount) {
+    essayHistoryToggleCount.textContent = String(submissions.length);
+  }
+
   if (!submissions.length) {
     const empty = document.createElement("div");
     empty.className = "essay-empty";
@@ -607,6 +629,7 @@ function renderHistory() {
 
     button.addEventListener("click", async () => {
       await openSubmission(submission.id);
+      toggleHistoryDrawer(false);
     });
 
     fragment.appendChild(button);
@@ -720,7 +743,6 @@ function getSubmissionPayload() {
     return {
       themeMode,
       themeTitle: essayCustomThemeTitle?.value.trim() || "",
-      themePrompt: essayCustomThemePrompt?.value.trim() || "",
       essayText: essayTextInput?.value || "",
     };
   }
@@ -794,6 +816,7 @@ essayCustomThemePrompt?.addEventListener("input", renderThemePreview);
 essayTextInput?.addEventListener("input", updateWordCount);
 essayResetButton?.addEventListener("click", resetForm);
 essayReuseButton?.addEventListener("click", () => populateFormFromSubmission(currentSubmission));
+essayHistoryToggle?.addEventListener("click", () => toggleHistoryDrawer());
 essayForm?.addEventListener("submit", handleSubmit);
 
 document.addEventListener("keydown", (event) => {
@@ -806,6 +829,7 @@ document.addEventListener("keydown", (event) => {
   try {
     await window.Start5Auth?.ready;
     updateWordCount();
+    updateHistoryToggle();
     await loadThemes();
     await loadSubmissions();
   } catch (error) {
