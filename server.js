@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { spawnSync } from "node:child_process";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -12,6 +13,7 @@ const projectRoot = __dirname;
 const publicDir = resolve(projectRoot, "public");
 const dataDir = resolve(projectRoot, "data");
 const dbFile = resolve(dataDir, "start5.db");
+const pythonEssayEngineEntry = resolve(projectRoot, "backend", "essay_engine", "cli.py");
 
 const PORT = Number(process.env.PORT) || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -35,6 +37,15 @@ const ALLOWED_STATES = new Set(["cansado", "normal", "focado"]);
 const DEFAULT_SUBJECT_KEY = "ingles";
 const ESSAY_STATUS_VALUES = new Set(["pending", "evaluated", "failed"]);
 const ESSAY_THEME_MODE_VALUES = new Set(["preset", "custom"]);
+const ESSAY_EVALUATION_MODE_VALUES = new Set(["local", "hybrid", "openai"]);
+const ESSAY_EVALUATION_MODE = ESSAY_EVALUATION_MODE_VALUES.has(String(process.env.START5_ESSAY_EVALUATION_MODE || "").trim().toLowerCase())
+  ? String(process.env.START5_ESSAY_EVALUATION_MODE || "").trim().toLowerCase()
+  : "local";
+const ESSAY_LOCAL_ENGINE_VALUES = new Set(["javascript", "python"]);
+const ESSAY_LOCAL_ENGINE = ESSAY_LOCAL_ENGINE_VALUES.has(String(process.env.START5_ESSAY_LOCAL_ENGINE || "").trim().toLowerCase())
+  ? String(process.env.START5_ESSAY_LOCAL_ENGINE || "").trim().toLowerCase()
+  : "javascript";
+const ESSAY_PYTHON_COMMAND = String(process.env.START5_PYTHON_COMMAND || "python").trim() || "python";
 const SUBJECT_LABELS = {
   ingles: "Ingl\u00eas",
   matematica: "Matem\u00e1tica",
@@ -177,6 +188,13 @@ const ESSAY_EVALUATION_SCHEMA = {
         type: "string",
       },
     },
+    analysisIndicators: {
+      type: "array",
+      maxItems: 6,
+      items: {
+        type: "string",
+      },
+    },
   },
 };
 const ESSAY_LOCAL_STOPWORDS = new Set([
@@ -274,6 +292,62 @@ const ESSAY_LOCAL_DETAIL_MARKERS = [
   "com acompanhamento",
   "com metas",
   "com periodicidade",
+];
+const ESSAY_LOCAL_CAUSAL_MARKERS = [
+  "porque",
+  "pois",
+  "já que",
+  "uma vez que",
+  "devido a",
+  "em razão de",
+  "por causa de",
+  "visto que",
+];
+const ESSAY_LOCAL_EXAMPLE_MARKERS = [
+  "por exemplo",
+  "como",
+  "segundo",
+  "de acordo com",
+  "conforme",
+  "a exemplo de",
+  "isto é",
+];
+const ESSAY_LOCAL_REPERTOIRE_MARKERS = [
+  "constituicao federal",
+  "direitos humanos",
+  "declaracao universal",
+  "ibge",
+  "ipea",
+  "onu",
+  "unesco",
+  "organizacao mundial da saude",
+  "paulo freire",
+  "zygmunt bauman",
+  "milton santos",
+  "sartre",
+  "aristoteles",
+  "platao",
+  "durkheim",
+  "foucault",
+  "simone de beauvoir",
+  "george orwell",
+  "revolucao industrial",
+  "idade media",
+  "seculo xxi",
+];
+const ESSAY_LOCAL_INFORMAL_MARKERS = [
+  "vc",
+  "vcs",
+  "pq",
+  "tbm",
+  "ta",
+  "to",
+  "pra",
+  "pro",
+  "tipo",
+  "mano",
+  "né",
+  "ne",
 ];
 const ALLOWED_ACTIVITIES = new Set([
   "serie",
@@ -1695,6 +1769,7 @@ function normalizeEssayEvaluation(rawEvaluation) {
     nextSteps: sanitizeEssayFeedbackList(rawEvaluation.nextSteps, 5, 200),
     interventionFeedback,
     highlightedExcerpts: sanitizeEssayFeedbackList(rawEvaluation.highlightedExcerpts, 4, 220),
+    analysisIndicators: sanitizeEssayFeedbackList(rawEvaluation.analysisIndicators, 6, 180),
   };
 }
 
@@ -1779,6 +1854,91 @@ function normalizeEssayBandScore(value) {
   return clampInteger(Math.round((Number(value) || 0) / 20) * 20, 0, 200);
 }
 
+function getEssaySignificantWords(text, minLength = 4) {
+  return normalizeEssayAnalysisText(text)
+    .split(/\s+/g)
+    .filter((word) => word.length >= minLength && !ESSAY_LOCAL_STOPWORDS.has(word));
+}
+
+function getEssayUniqueWordRatio(text) {
+  const words = getEssaySignificantWords(text, 4);
+
+  if (!words.length) {
+    return 0;
+  }
+
+  return new Set(words).size / words.length;
+}
+
+function getEssayParagraphOpeningVariety(paragraphs) {
+  const openings = paragraphs
+    .map((paragraph) => getEssaySignificantWords(paragraph, 3).slice(0, 3).join(" "))
+    .filter(Boolean);
+
+  return new Set(openings).size;
+}
+
+function getEssayMarkerMetrics(text, markers) {
+  const counts = new Map();
+  let total = 0;
+
+  markers.forEach((marker) => {
+    if (containsEssayAnalysisTerm(text, marker)) {
+      counts.set(marker, 1);
+      total += 1;
+    }
+  });
+
+  return {
+    total,
+    unique: counts.size,
+    items: [...counts.keys()],
+  };
+}
+
+function getEssayThemeCoverageMetrics(submission, paragraphs) {
+  const keywords = getEssayThemeKeywords(submission?.themeTitle, submission?.themePrompt);
+  const introText = paragraphs[0] || "";
+  const bodyText = paragraphs.slice(1, -1).join(" ");
+  const conclusionText = paragraphs[paragraphs.length - 1] || "";
+  const allText = paragraphs.join(" ");
+
+  const introHits = countEssayAnalysisMatches(introText, keywords);
+  const bodyHits = countEssayAnalysisMatches(bodyText, keywords);
+  const conclusionHits = countEssayAnalysisMatches(conclusionText, keywords);
+  const totalHits = countEssayAnalysisMatches(allText, keywords);
+  const coverage = keywords.length ? totalHits / keywords.length : 0;
+
+  return {
+    keywords,
+    introHits,
+    bodyHits,
+    conclusionHits,
+    totalHits,
+    coverage,
+  };
+}
+
+function getEssayInterventionMetrics(text) {
+  return {
+    agents: getEssayMarkerMetrics(text, ESSAY_LOCAL_INTERVENTION_AGENTS),
+    actions: getEssayMarkerMetrics(text, ESSAY_LOCAL_INTERVENTION_ACTIONS),
+    means: getEssayMarkerMetrics(text, ESSAY_LOCAL_INTERVENTION_MEANS),
+    purposes: getEssayMarkerMetrics(text, ESSAY_LOCAL_INTERVENTION_PURPOSE),
+    details: getEssayMarkerMetrics(text, ESSAY_LOCAL_DETAIL_MARKERS),
+  };
+}
+
+function countEssayPresentComponents(interventionMetrics) {
+  return [
+    interventionMetrics.agents.total,
+    interventionMetrics.actions.total,
+    interventionMetrics.means.total,
+    interventionMetrics.purposes.total,
+    interventionMetrics.details.total,
+  ].filter((value) => value > 0).length;
+}
+
 function buildLocalEssayEvaluation(submission, sourceError) {
   const essayText = String(submission?.essayText || "");
   const normalizedText = normalizeEssayAnalysisText(essayText);
@@ -1786,116 +1946,136 @@ function buildLocalEssayEvaluation(submission, sourceError) {
   const sentences = splitEssaySentences(essayText);
   const wordCount = Number(submission?.wordCount) || countWords(essayText);
   const avgSentenceWords = sentences.length ? wordCount / sentences.length : wordCount;
-  const uppercaseMatches = essayText.match(/[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/g) || [];
-  const letterMatches = essayText.match(/[A-Za-zÁÀÂÃÉÊÍÓÔÕÚÇáàâãéêíóôõúç]/g) || [];
+  const uppercaseMatches = essayText.match(/\p{Lu}/gu) || [];
+  const letterMatches = essayText.match(/\p{L}/gu) || [];
   const uppercaseRatio = letterMatches.length ? uppercaseMatches.length / letterMatches.length : 0;
   const exclamationCount = (essayText.match(/!/g) || []).length;
   const questionCount = (essayText.match(/\?/g) || []).length;
   const repeatedPunctuationCount = (essayText.match(/([!?.,;:])\1{1,}/g) || []).length;
-  const connectiveCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_CONNECTIVES);
-  const thesisMarkerCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_THESIS_MARKERS);
-  const conclusionMarkerCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_CONCLUSION_MARKERS);
-  const themeKeywords = getEssayThemeKeywords(submission?.themeTitle, submission?.themePrompt);
-  const themeKeywordHits = countEssayAnalysisMatches(normalizedText, themeKeywords);
-  const keywordCoverage = themeKeywords.length ? themeKeywordHits / themeKeywords.length : 0;
+  const informalMetrics = getEssayMarkerMetrics(normalizedText, ESSAY_LOCAL_INFORMAL_MARKERS);
+  const connectiveMetrics = getEssayMarkerMetrics(normalizedText, ESSAY_LOCAL_CONNECTIVES);
+  const causalMetrics = getEssayMarkerMetrics(normalizedText, ESSAY_LOCAL_CAUSAL_MARKERS);
+  const exampleMetrics = getEssayMarkerMetrics(normalizedText, ESSAY_LOCAL_EXAMPLE_MARKERS);
+  const repertoryMetrics = getEssayMarkerMetrics(normalizedText, ESSAY_LOCAL_REPERTOIRE_MARKERS);
+  const thesisMarkerCount = countEssayAnalysisMatches(paragraphs[0] || essayText, ESSAY_LOCAL_THESIS_MARKERS);
+  const conclusionMarkerCount = countEssayAnalysisMatches(paragraphs[paragraphs.length - 1] || essayText, ESSAY_LOCAL_CONCLUSION_MARKERS);
+  const themeCoverage = getEssayThemeCoverageMetrics(submission, paragraphs);
   const conclusionText = paragraphs[paragraphs.length - 1] || essayText;
-  const interventionAgentHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_AGENTS);
-  const interventionActionHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_ACTIONS);
-  const interventionMeansHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_MEANS);
-  const interventionPurposeHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_PURPOSE);
-  const interventionDetailHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_DETAIL_MARKERS);
-  const interventionComponents =
-    interventionAgentHits +
-    interventionActionHits +
-    interventionMeansHits +
-    interventionPurposeHits +
-    interventionDetailHits;
+  const interventionMetrics = getEssayInterventionMetrics(conclusionText);
+  const interventionComponentCount = countEssayPresentComponents(interventionMetrics);
+  const uniqueWordRatio = getEssayUniqueWordRatio(essayText);
+  const paragraphOpeningVariety = getEssayParagraphOpeningVariety(paragraphs);
+  const bodyParagraphs = paragraphs.length > 2 ? paragraphs.slice(1, -1) : paragraphs.slice(1);
+  const bodyParagraphCount = bodyParagraphs.length;
+  const bodyParagraphsWithSubstance = bodyParagraphs.filter((paragraph) => countWords(paragraph) >= 45).length;
+  const veryShortParagraphCount = paragraphs.filter((paragraph) => countWords(paragraph) < 25).length;
+  const numericEvidenceCount = (essayText.match(/\b\d+(?:[.,]\d+)?\b|%/g) || []).length;
 
   let competency1Score = 80;
-  if (wordCount >= 220) competency1Score += 20;
+  if (wordCount >= 260) competency1Score += 20;
   if (paragraphs.length >= 4) competency1Score += 20;
-  if (avgSentenceWords >= 8 && avgSentenceWords <= 28) competency1Score += 20;
-  if (uppercaseRatio < 0.05) competency1Score += 20;
-  if (exclamationCount === 0 && questionCount <= 1 && repeatedPunctuationCount === 0) competency1Score += 20;
-  if (avgSentenceWords > 32 || avgSentenceWords < 5) competency1Score -= 20;
-  if (uppercaseRatio > 0.1 || exclamationCount > 2 || repeatedPunctuationCount > 0) competency1Score -= 20;
+  if (avgSentenceWords >= 10 && avgSentenceWords <= 28) competency1Score += 20;
+  if (informalMetrics.total === 0) competency1Score += 20;
+  if (exclamationCount === 0 && repeatedPunctuationCount === 0 && uppercaseRatio < 0.08) competency1Score += 20;
+  if (uniqueWordRatio >= 0.45) competency1Score += 20;
+  if (informalMetrics.total >= 1) competency1Score -= 20;
+  if (avgSentenceWords < 6 || avgSentenceWords > 34) competency1Score -= 20;
+  if (exclamationCount > 1 || questionCount > 2 || repeatedPunctuationCount > 0) competency1Score -= 20;
+  if (veryShortParagraphCount >= 2) competency1Score -= 20;
   competency1Score = normalizeEssayBandScore(competency1Score);
 
   let competency2Score = 40;
-  if (keywordCoverage >= 0.55) competency2Score += 100;
-  else if (keywordCoverage >= 0.35) competency2Score += 80;
-  else if (keywordCoverage >= 0.2) competency2Score += 60;
-  else if (themeKeywordHits > 0) competency2Score += 40;
+  if (themeCoverage.coverage >= 0.6) competency2Score += 100;
+  else if (themeCoverage.coverage >= 0.4) competency2Score += 80;
+  else if (themeCoverage.coverage >= 0.25) competency2Score += 60;
+  else if (themeCoverage.totalHits > 0) competency2Score += 40;
   else competency2Score += 20;
-  if (paragraphs.length >= 4) competency2Score += 20;
+  if (themeCoverage.introHits > 0) competency2Score += 20;
+  if (themeCoverage.bodyHits >= 2) competency2Score += 20;
+  if (repertoryMetrics.total > 0) competency2Score += 20;
   if (thesisMarkerCount > 0) competency2Score += 20;
   competency2Score = normalizeEssayBandScore(competency2Score);
 
   let competency3Score = 40;
-  if (paragraphs.length >= 4) competency3Score += 40;
-  if (sentences.length >= 8) competency3Score += 20;
-  if (thesisMarkerCount > 0) competency3Score += 40;
-  if (connectiveCount >= 4) competency3Score += 20;
-  if (paragraphs.length >= 3) competency3Score += 20;
+  if (paragraphs.length >= 4) competency3Score += 20;
+  if (bodyParagraphCount >= 2) competency3Score += 20;
+  if (bodyParagraphsWithSubstance >= 2) competency3Score += 20;
+  if (thesisMarkerCount > 0) competency3Score += 20;
+  if (causalMetrics.total >= 2) competency3Score += 20;
+  if (exampleMetrics.total >= 1 || numericEvidenceCount > 0) competency3Score += 20;
+  if (repertoryMetrics.total > 0) competency3Score += 20;
+  if (themeCoverage.bodyHits >= 2) competency3Score += 20;
   competency3Score = normalizeEssayBandScore(competency3Score);
 
   let competency4Score = 40;
-  if (connectiveCount >= 6) competency4Score += 60;
-  else if (connectiveCount >= 3) competency4Score += 40;
-  else if (connectiveCount >= 1) competency4Score += 20;
+  if (connectiveMetrics.total >= 3) competency4Score += 20;
+  if (connectiveMetrics.unique >= 3) competency4Score += 20;
+  if (connectiveMetrics.unique >= 5) competency4Score += 20;
+  if (paragraphOpeningVariety >= 3) competency4Score += 20;
+  if (avgSentenceWords >= 10 && avgSentenceWords <= 28) competency4Score += 20;
+  if (conclusionMarkerCount > 0) competency4Score += 20;
   if (paragraphs.length >= 4) competency4Score += 20;
-  if (sentences.length >= 8) competency4Score += 20;
-  if (avgSentenceWords >= 8 && avgSentenceWords <= 28) competency4Score += 20;
   competency4Score = normalizeEssayBandScore(competency4Score);
 
   let competency5Score = 20;
-  competency5Score += interventionComponents * 30;
   if (conclusionMarkerCount > 0) competency5Score += 20;
-  if (paragraphs.length >= 4) competency5Score += 10;
+  competency5Score += interventionComponentCount * 30;
+  if (countWords(conclusionText) >= 45) competency5Score += 10;
+  if (interventionMetrics.details.total > 0) competency5Score += 10;
   competency5Score = normalizeEssayBandScore(competency5Score);
 
   const quotaOrConfigIssue =
     Number(sourceError?.statusCode) === 429 ||
     /quota|billing|rate limit|OPENAI_API_KEY|OPENAI_MODEL/i.test(String(sourceError?.message || ""));
   const fallbackPrefix = quotaOrConfigIssue
-    ? "Avaliacao local automatica usada porque a IA nao estava disponivel agora."
-    : "Avaliacao local automatica usada como plano de seguranca.";
+    ? "Avaliação local automática usada porque a IA não estava disponível agora."
+    : "Avaliação local automática usada como plano de segurança.";
 
   const competencies = [
     {
       id: 1,
       name: "Competência 1",
       score: competency1Score,
-      justification: `O texto trouxe ${wordCount} palavras em ${paragraphs.length} paragrafos, com media de ${Math.max(1, Math.round(avgSentenceWords))} palavras por frase. A leitura formal ficou mais consistente quando a pontuacao se manteve regular.`,
-      improvement: "Revise ortografia, acentuacao e pontuacao frase por frase para manter um registro formal e mais estavel.",
+      justification: `O texto trouxe ${wordCount} palavras em ${paragraphs.length} parágrafo(s), com média de ${Math.max(1, Math.round(avgSentenceWords))} palavras por frase. A formalidade ficou mais estável quando a pontuação e o registro se mantiveram regulares.`,
+      improvement: informalMetrics.total > 0
+        ? "Retire marcas de oralidade e revise ortografia, acentuação e pontuação frase por frase."
+        : "Faça uma revisão final de ortografia, concordância e pontuação para sustentar um registro formal do começo ao fim.",
     },
     {
       id: 2,
       name: "Competência 2",
       score: competency2Score,
-      justification: `O corretor local identificou ${themeKeywordHits} ponto(s) de contato com o tema principal, com cobertura aproximada de ${Math.round(keywordCoverage * 100)}% das palavras-chave analisadas.`,
-      improvement: "Retome o tema com mais clareza na introducao e nos argumentos para mostrar aderencia mais forte a proposta.",
+      justification: `A leitura temática encontrou ${themeCoverage.totalHits} aproximações com o tema, com cobertura estimada de ${Math.round(themeCoverage.coverage * 100)}% das palavras-chave analisadas, além de ${repertoryMetrics.total} referência(s) de repertório.`,
+      improvement: themeCoverage.coverage < 0.35
+        ? "Retome o foco do tema já na introdução e faça os parágrafos de desenvolvimento voltarem explicitamente ao recorte proposto."
+        : "Aprofunde o recorte do tema com repertório e explicite melhor como cada argumento conversa com a proposta.",
     },
     {
       id: 3,
       name: "Competência 3",
       score: competency3Score,
-      justification: `A estrutura em ${paragraphs.length} paragrafos e o uso de ${thesisMarkerCount} marca(s) de tese ajudam a medir a organizacao da argumentacao.`,
-      improvement: "Fortaleça a tese e faça cada paragrafo desenvolver uma ideia com causa, exemplo e consequência.",
+      justification: `A argumentação foi estimada a partir da presença de tese na introdução, ${bodyParagraphsWithSubstance} parágrafo(s) de desenvolvimento com bom corpo textual, ${causalMetrics.total} marca(s) de causa e ${exampleMetrics.total + numericEvidenceCount} sinal(is) de exemplificação ou dado.`,
+      improvement: bodyParagraphsWithSubstance < 2
+        ? "Fortaleça os parágrafos de desenvolvimento com uma ideia central mais clara, explicação e consequência."
+        : "Refine a progressão dos argumentos para que cada desenvolvimento avance a tese com mais precisão.",
     },
     {
       id: 4,
       name: "Competência 4",
       score: competency4Score,
-      justification: `Foram encontrados ${connectiveCount} conectivo(s) relevantes, o que ajuda a estimar a ligacao entre as partes do texto.`,
-      improvement: "Use mais conectivos variados entre frases e paragrafos para deixar a progressao das ideias mais fluida.",
+      justification: `Foram identificados ${connectiveMetrics.total} conectivo(s) relevantes, com diversidade de ${connectiveMetrics.unique}, além de variedade de abertura em ${paragraphOpeningVariety} parágrafo(s), o que ajuda a medir a costura do texto.`,
+      improvement: connectiveMetrics.unique < 3
+        ? "Use conectivos mais variados entre frases e parágrafos para deixar a progressão das ideias mais fluida."
+        : "Mantenha a coesão, mas refine a transição entre um argumento e outro para o texto soar mais orgânico.",
     },
     {
       id: 5,
       name: "Competência 5",
       score: competency5Score,
-      justification: `Na parte final foram percebidos ${interventionComponents} componente(s) ligados a proposta de intervencao, considerando agente, acao, meio, finalidade e detalhamento.`,
-      improvement: "Feche a redacao com agente, acao, meio, finalidade e detalhamento mais explicitos para a proposta de intervencao ficar completa.",
+      justification: `Na parte final apareceram ${interventionComponentCount} componente(s) da proposta de intervenção, considerando agente, ação, meio, finalidade e detalhamento.`,
+      improvement: interventionComponentCount < 4
+        ? "Feche a redação com agente, ação, meio, finalidade e detalhamento mais explícitos para a proposta de intervenção ficar completa."
+        : "Sua proposta já aparece, mas ainda pode ganhar mais detalhamento operacional para subir a nota.",
     },
   ];
 
@@ -1905,7 +2085,12 @@ function buildLocalEssayEvaluation(submission, sourceError) {
   const totalScore = competencies.reduce((sum, item) => sum + item.score, 0);
   const highlightedExcerpts = [];
 
-  [sentences[0], sentences[1], sentences.find((item) => countEssayAnalysisMatches(item, ESSAY_LOCAL_INTERVENTION_ACTIONS) > 0), sentences[sentences.length - 1]]
+  [
+    sentences[0],
+    bodyParagraphs.find((paragraph) => countWords(paragraph) >= 45),
+    sentences.find((item) => countEssayAnalysisMatches(item, ESSAY_LOCAL_INTERVENTION_ACTIONS) > 0),
+    sentences[sentences.length - 1],
+  ]
     .map((item) => sanitizeEssayFeedbackText(item, 220))
     .forEach((item) => {
       if (item && !highlightedExcerpts.includes(item) && highlightedExcerpts.length < 4) {
@@ -1913,31 +2098,101 @@ function buildLocalEssayEvaluation(submission, sourceError) {
       }
     });
 
+  const analysisIndicators = [
+    `Estrutura: ${wordCount} palavras em ${paragraphs.length} parágrafo(s).`,
+    `Tema: ${themeCoverage.totalHits} referência(s) diretas ao recorte, com cobertura aproximada de ${Math.round(themeCoverage.coverage * 100)}%.`,
+    `Coesão: ${connectiveMetrics.total} conectivo(s) relevantes, com diversidade de ${connectiveMetrics.unique}.`,
+    `Argumentação: ${bodyParagraphsWithSubstance} desenvolvimento(s) com bom corpo textual e ${exampleMetrics.total + numericEvidenceCount} marca(s) de exemplo ou dado.`,
+    `Repertório: ${repertoryMetrics.total} referência(s) externas percebidas.`,
+    `Intervenção: ${interventionComponentCount} elemento(s) da proposta de intervenção identificados na conclusão.`,
+  ];
+
   return normalizeEssayEvaluation({
     competencies,
     totalScore,
-    summaryFeedback: `${fallbackPrefix} Sua nota estimada ficou em ${totalScore} pontos. Hoje, ${strongestCompetency.name} apareceu como ponto mais forte e ${weakestCompetency.name} como principal prioridade de melhora.`,
+    summaryFeedback: `${fallbackPrefix} Sua nota estimada ficou em ${totalScore} pontos. Neste texto, ${strongestCompetency.name} apareceu como ponto mais forte, enquanto ${weakestCompetency.name} segue como prioridade principal de melhora.`,
     strengths: [
-      `${strongestCompetency.name} foi a melhor competencia nesta leitura automatica.`,
-      paragraphs.length >= 4 ? "A estrutura em paragrafos ja ajuda a sustentar a redacao." : "Ha um esforco de organizacao inicial no texto.",
-      wordCount >= 260 ? "O tamanho do texto ja se aproxima de uma redacao mais desenvolvida." : "O texto ja tem base para evoluir com mais desenvolvimento.",
+      `${strongestCompetency.name} foi a competência mais consistente nesta leitura automatizada.`,
+      paragraphs.length >= 4 ? "A estrutura em parágrafos já ajuda a organizar a leitura." : "Há uma base inicial de organização que pode ser aprofundada.",
+      repertoryMetrics.total > 0 ? "O texto traz sinais de repertório, o que ajuda a enriquecer a argumentação." : "O texto já tem base para crescer com repertório mais explícito.",
     ],
     mainProblems: [
-      `${weakestCompetency.name} foi a competencia com menor nota nesta estimativa.`,
-      connectiveCount < 3 ? "A coesao ainda depende de poucos conectivos." : "A conexao entre as ideias ainda pode ficar mais refinada.",
-      interventionComponents < 3 ? "A proposta de intervencao ainda esta incompleta ou pouco detalhada." : "A proposta final ainda pode ganhar mais detalhamento.",
+      `${weakestCompetency.name} ficou com a menor nota nesta estimativa.`,
+      connectiveMetrics.unique < 3 ? "A coesão ainda depende de poucos conectivos e transições." : "A transição entre os argumentos ainda pode ficar mais refinada.",
+      interventionComponentCount < 4 ? "A proposta de intervenção ainda está incompleta ou pouco detalhada." : "A proposta final existe, mas ainda pode ganhar mais precisão prática.",
     ],
     nextSteps: [
       weakestCompetency.improvement,
-      "Revise a introducao para deixar a tese e o foco do tema mais explicitos.",
-      "Na proxima versao, tente manter quatro paragrafos bem definidos: introducao, dois desenvolvimentos e conclusao.",
+      "Revise a introdução para deixar a tese e o recorte do tema mais explícitos.",
+      "Na próxima versão, mantenha quatro parágrafos bem definidos: introdução, dois desenvolvimentos e conclusão.",
     ],
     interventionFeedback:
-      interventionComponents >= 4
-        ? "A proposta de intervencao apareceu de forma perceptivel, mas ainda pode ganhar mais detalhamento para subir a nota."
-        : "A proposta de intervencao precisa ficar mais completa, com agente, acao, meio e finalidade mais claros.",
+      interventionComponentCount >= 4
+        ? "A proposta de intervenção já aparece de forma perceptível, mas ainda pode ganhar mais detalhamento para subir a nota."
+        : "A proposta de intervenção precisa ficar mais completa, com agente, ação, meio, finalidade e detalhamento mais claros.",
     highlightedExcerpts,
+    analysisIndicators,
   });
+}
+
+function evaluateEssayWithPythonEngine(submission, sourceError) {
+  if (!existsSync(pythonEssayEngineEntry)) {
+    throw createError(500, "Motor Python de redação não encontrado.");
+  }
+
+  const payload = JSON.stringify({
+    submission: {
+      themeTitle: submission?.themeTitle || "",
+      themePrompt: submission?.themePrompt || "",
+      essayText: submission?.essayText || "",
+      wordCount: submission?.wordCount || 0,
+    },
+    sourceErrorMessage: String(sourceError?.message || ""),
+    sourceStatusCode: Number(sourceError?.statusCode) || 0,
+  });
+
+  const result = spawnSync(
+    ESSAY_PYTHON_COMMAND,
+    [pythonEssayEngineEntry],
+    {
+      cwd: projectRoot,
+      input: payload,
+      encoding: "utf8",
+      timeout: 12_000,
+      maxBuffer: 1024 * 1024,
+    }
+  );
+
+  if (result.error) {
+    throw createError(500, `Motor Python indisponível: ${result.error.message}`);
+  }
+
+  if (result.status !== 0) {
+    const message = String(result.stderr || result.stdout || "").trim() || "Motor Python não respondeu corretamente.";
+    throw createError(500, message);
+  }
+
+  let parsedEvaluation;
+
+  try {
+    parsedEvaluation = JSON.parse(String(result.stdout || "").trim());
+  } catch {
+    throw createError(500, "O motor Python retornou uma resposta inválida.");
+  }
+
+  return normalizeEssayEvaluation(parsedEvaluation);
+}
+
+function evaluateEssayLocally(submission, sourceError) {
+  if (ESSAY_LOCAL_ENGINE === "python") {
+    try {
+      return evaluateEssayWithPythonEngine(submission, sourceError);
+    } catch (pythonError) {
+      return buildLocalEssayEvaluation(submission, sourceError || pythonError);
+    }
+  }
+
+  return buildLocalEssayEvaluation(submission, sourceError);
 }
 
 function sanitizeEssaySubmissionRow(row, options = {}) {
@@ -3302,13 +3557,38 @@ async function handleCreateEssaySubmission(request, response) {
   const payload = await readRequestBody(request);
   const pendingSubmission = createPendingEssaySubmission(user.id, payload);
 
+  if (ESSAY_EVALUATION_MODE === "local") {
+    const evaluation = evaluateEssayLocally(pendingSubmission);
+    const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, evaluation);
+    sendJson(response, 201, { submission, fallbackMode: "local" });
+    return;
+  }
+
   try {
     const evaluation = await evaluateEssayWithAI(pendingSubmission);
     const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, evaluation);
     sendJson(response, 201, { submission });
   } catch (error) {
+    if (ESSAY_EVALUATION_MODE === "openai") {
+      const submission = markEssaySubmissionFailed(
+        user.id,
+        pendingSubmission.id,
+        error?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA."
+      );
+      const statusCode =
+        Number.isInteger(error?.statusCode) && error.statusCode >= 400
+          ? error.statusCode
+          : 502;
+
+      sendJson(response, statusCode, {
+        error: submission.errorMessage || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA.",
+        submission,
+      });
+      return;
+    }
+
     try {
-      const fallbackEvaluation = buildLocalEssayEvaluation(pendingSubmission, error);
+      const fallbackEvaluation = evaluateEssayLocally(pendingSubmission, error);
       const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, fallbackEvaluation);
       sendJson(response, 201, { submission, fallbackMode: "local" });
     } catch (fallbackError) {

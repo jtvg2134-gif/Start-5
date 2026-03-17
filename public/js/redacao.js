@@ -545,6 +545,7 @@ function renderSubmission(submission) {
     createListPanel("Pontos fortes", submission.feedback.strengths, "Nenhum destaque principal informado."),
     createListPanel("Principais problemas", submission.feedback.mainProblems, "Nenhum problema principal informado."),
     createListPanel("Pr\u00f3ximos passos", submission.feedback.nextSteps, "Nenhum pr\u00f3ximo passo informado."),
+    createListPanel("Leitura t\u00e9cnica", submission.feedback.analysisIndicators, "Nenhum indicador adicional informado."),
     createListPanel(
       "Trechos destacados",
       submission.feedback.highlightedExcerpts,
