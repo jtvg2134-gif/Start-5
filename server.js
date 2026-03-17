@@ -179,6 +179,102 @@ const ESSAY_EVALUATION_SCHEMA = {
     },
   },
 };
+const ESSAY_LOCAL_STOPWORDS = new Set([
+  "a", "o", "as", "os", "de", "da", "do", "das", "dos", "e", "em", "no", "na", "nos", "nas",
+  "um", "uma", "uns", "umas", "para", "por", "com", "sem", "sobre", "entre", "que", "se",
+  "ao", "aos", "à", "às", "como", "mais", "menos", "muito", "muita", "muitos", "muitas",
+  "ser", "estar", "ter", "há", "isso", "essa", "esse", "essas", "esses", "sua", "seu",
+  "suas", "seus", "são", "foi", "era", "dos", "das", "pela", "pelo", "pelas", "pelos",
+  "também", "já", "ainda", "quando", "onde", "porque", "pois", "num", "numa", "ele", "ela",
+  "eles", "elas", "lhe", "lhes", "eu", "tu", "nós", "vocês", "você",
+]);
+const ESSAY_LOCAL_CONNECTIVES = [
+  "além disso",
+  "portanto",
+  "assim",
+  "desse modo",
+  "nesse sentido",
+  "sob essa ótica",
+  "dessa forma",
+  "contudo",
+  "entretanto",
+  "todavia",
+  "porém",
+  "logo",
+  "outrossim",
+  "em primeiro lugar",
+  "em segundo lugar",
+  "por conseguinte",
+  "em síntese",
+  "por fim",
+  "ademais",
+];
+const ESSAY_LOCAL_THESIS_MARKERS = [
+  "é preciso",
+  "é necessário",
+  "é fundamental",
+  "torna-se",
+  "deve-se",
+  "nota-se",
+  "percebe-se",
+];
+const ESSAY_LOCAL_CONCLUSION_MARKERS = [
+  "portanto",
+  "em síntese",
+  "em suma",
+  "por fim",
+  "dessa forma",
+  "desse modo",
+  "assim",
+];
+const ESSAY_LOCAL_INTERVENTION_AGENTS = [
+  "governo",
+  "estado",
+  "escola",
+  "familia",
+  "sociedade",
+  "ministerio",
+  "midia",
+  "ong",
+  "instituicoes",
+  "prefeitura",
+];
+const ESSAY_LOCAL_INTERVENTION_ACTIONS = [
+  "promover",
+  "criar",
+  "garantir",
+  "oferecer",
+  "ampliar",
+  "investir",
+  "fiscalizar",
+  "desenvolver",
+  "realizar",
+  "implementar",
+];
+const ESSAY_LOCAL_INTERVENTION_MEANS = [
+  "por meio de",
+  "mediante",
+  "através de",
+  "com campanhas",
+  "com apoio",
+  "em parceria",
+  "por intermédio",
+];
+const ESSAY_LOCAL_INTERVENTION_PURPOSE = [
+  "para",
+  "a fim de",
+  "com o objetivo de",
+  "visando",
+];
+const ESSAY_LOCAL_DETAIL_MARKERS = [
+  "nas escolas",
+  "na mídia",
+  "na internet",
+  "nas redes sociais",
+  "com acompanhamento",
+  "com metas",
+  "com periodicidade",
+];
 const ALLOWED_ACTIVITIES = new Set([
   "serie",
   "game",
@@ -1616,6 +1712,234 @@ function parseEssayEvaluation(value) {
   }
 }
 
+function normalizeEssayAnalysisText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s.!?]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function splitEssayParagraphs(value) {
+  return String(value || "")
+    .split(/\n+/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function splitEssaySentences(value) {
+  const matches = String(value || "")
+    .replace(/\n+/g, " ")
+    .match(/[^.!?]+[.!?]?/g);
+
+  return Array.isArray(matches)
+    ? matches.map((item) => item.trim()).filter(Boolean)
+    : [];
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsEssayAnalysisTerm(text, term) {
+  const normalizedText = normalizeEssayAnalysisText(text);
+  const normalizedTerm = normalizeEssayAnalysisText(term);
+
+  if (!normalizedText || !normalizedTerm) {
+    return false;
+  }
+
+  if (normalizedTerm.includes(" ")) {
+    return normalizedText.includes(normalizedTerm);
+  }
+
+  return new RegExp(`(^|\\s)${escapeRegExp(normalizedTerm)}(?=\\s|$)`, "u").test(normalizedText);
+}
+
+function countEssayAnalysisMatches(text, terms) {
+  return terms.reduce((total, term) => total + (containsEssayAnalysisTerm(text, term) ? 1 : 0), 0);
+}
+
+function getEssayThemeKeywords(...values) {
+  const keywordSet = new Set();
+
+  values.forEach((value) => {
+    normalizeEssayAnalysisText(value)
+      .split(/\s+/g)
+      .filter((word) => word.length >= 4 && !ESSAY_LOCAL_STOPWORDS.has(word))
+      .forEach((word) => keywordSet.add(word));
+  });
+
+  return [...keywordSet].slice(0, 10);
+}
+
+function normalizeEssayBandScore(value) {
+  return clampInteger(Math.round((Number(value) || 0) / 20) * 20, 0, 200);
+}
+
+function buildLocalEssayEvaluation(submission, sourceError) {
+  const essayText = String(submission?.essayText || "");
+  const normalizedText = normalizeEssayAnalysisText(essayText);
+  const paragraphs = splitEssayParagraphs(essayText);
+  const sentences = splitEssaySentences(essayText);
+  const wordCount = Number(submission?.wordCount) || countWords(essayText);
+  const avgSentenceWords = sentences.length ? wordCount / sentences.length : wordCount;
+  const uppercaseMatches = essayText.match(/[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/g) || [];
+  const letterMatches = essayText.match(/[A-Za-zÁÀÂÃÉÊÍÓÔÕÚÇáàâãéêíóôõúç]/g) || [];
+  const uppercaseRatio = letterMatches.length ? uppercaseMatches.length / letterMatches.length : 0;
+  const exclamationCount = (essayText.match(/!/g) || []).length;
+  const questionCount = (essayText.match(/\?/g) || []).length;
+  const repeatedPunctuationCount = (essayText.match(/([!?.,;:])\1{1,}/g) || []).length;
+  const connectiveCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_CONNECTIVES);
+  const thesisMarkerCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_THESIS_MARKERS);
+  const conclusionMarkerCount = countEssayAnalysisMatches(normalizedText, ESSAY_LOCAL_CONCLUSION_MARKERS);
+  const themeKeywords = getEssayThemeKeywords(submission?.themeTitle, submission?.themePrompt);
+  const themeKeywordHits = countEssayAnalysisMatches(normalizedText, themeKeywords);
+  const keywordCoverage = themeKeywords.length ? themeKeywordHits / themeKeywords.length : 0;
+  const conclusionText = paragraphs[paragraphs.length - 1] || essayText;
+  const interventionAgentHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_AGENTS);
+  const interventionActionHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_ACTIONS);
+  const interventionMeansHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_MEANS);
+  const interventionPurposeHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_INTERVENTION_PURPOSE);
+  const interventionDetailHits = countEssayAnalysisMatches(conclusionText, ESSAY_LOCAL_DETAIL_MARKERS);
+  const interventionComponents =
+    interventionAgentHits +
+    interventionActionHits +
+    interventionMeansHits +
+    interventionPurposeHits +
+    interventionDetailHits;
+
+  let competency1Score = 80;
+  if (wordCount >= 220) competency1Score += 20;
+  if (paragraphs.length >= 4) competency1Score += 20;
+  if (avgSentenceWords >= 8 && avgSentenceWords <= 28) competency1Score += 20;
+  if (uppercaseRatio < 0.05) competency1Score += 20;
+  if (exclamationCount === 0 && questionCount <= 1 && repeatedPunctuationCount === 0) competency1Score += 20;
+  if (avgSentenceWords > 32 || avgSentenceWords < 5) competency1Score -= 20;
+  if (uppercaseRatio > 0.1 || exclamationCount > 2 || repeatedPunctuationCount > 0) competency1Score -= 20;
+  competency1Score = normalizeEssayBandScore(competency1Score);
+
+  let competency2Score = 40;
+  if (keywordCoverage >= 0.55) competency2Score += 100;
+  else if (keywordCoverage >= 0.35) competency2Score += 80;
+  else if (keywordCoverage >= 0.2) competency2Score += 60;
+  else if (themeKeywordHits > 0) competency2Score += 40;
+  else competency2Score += 20;
+  if (paragraphs.length >= 4) competency2Score += 20;
+  if (thesisMarkerCount > 0) competency2Score += 20;
+  competency2Score = normalizeEssayBandScore(competency2Score);
+
+  let competency3Score = 40;
+  if (paragraphs.length >= 4) competency3Score += 40;
+  if (sentences.length >= 8) competency3Score += 20;
+  if (thesisMarkerCount > 0) competency3Score += 40;
+  if (connectiveCount >= 4) competency3Score += 20;
+  if (paragraphs.length >= 3) competency3Score += 20;
+  competency3Score = normalizeEssayBandScore(competency3Score);
+
+  let competency4Score = 40;
+  if (connectiveCount >= 6) competency4Score += 60;
+  else if (connectiveCount >= 3) competency4Score += 40;
+  else if (connectiveCount >= 1) competency4Score += 20;
+  if (paragraphs.length >= 4) competency4Score += 20;
+  if (sentences.length >= 8) competency4Score += 20;
+  if (avgSentenceWords >= 8 && avgSentenceWords <= 28) competency4Score += 20;
+  competency4Score = normalizeEssayBandScore(competency4Score);
+
+  let competency5Score = 20;
+  competency5Score += interventionComponents * 30;
+  if (conclusionMarkerCount > 0) competency5Score += 20;
+  if (paragraphs.length >= 4) competency5Score += 10;
+  competency5Score = normalizeEssayBandScore(competency5Score);
+
+  const quotaOrConfigIssue =
+    Number(sourceError?.statusCode) === 429 ||
+    /quota|billing|rate limit|OPENAI_API_KEY|OPENAI_MODEL/i.test(String(sourceError?.message || ""));
+  const fallbackPrefix = quotaOrConfigIssue
+    ? "Avaliacao local automatica usada porque a IA nao estava disponivel agora."
+    : "Avaliacao local automatica usada como plano de seguranca.";
+
+  const competencies = [
+    {
+      id: 1,
+      name: "Competência 1",
+      score: competency1Score,
+      justification: `O texto trouxe ${wordCount} palavras em ${paragraphs.length} paragrafos, com media de ${Math.max(1, Math.round(avgSentenceWords))} palavras por frase. A leitura formal ficou mais consistente quando a pontuacao se manteve regular.`,
+      improvement: "Revise ortografia, acentuacao e pontuacao frase por frase para manter um registro formal e mais estavel.",
+    },
+    {
+      id: 2,
+      name: "Competência 2",
+      score: competency2Score,
+      justification: `O corretor local identificou ${themeKeywordHits} ponto(s) de contato com o tema principal, com cobertura aproximada de ${Math.round(keywordCoverage * 100)}% das palavras-chave analisadas.`,
+      improvement: "Retome o tema com mais clareza na introducao e nos argumentos para mostrar aderencia mais forte a proposta.",
+    },
+    {
+      id: 3,
+      name: "Competência 3",
+      score: competency3Score,
+      justification: `A estrutura em ${paragraphs.length} paragrafos e o uso de ${thesisMarkerCount} marca(s) de tese ajudam a medir a organizacao da argumentacao.`,
+      improvement: "Fortaleça a tese e faça cada paragrafo desenvolver uma ideia com causa, exemplo e consequência.",
+    },
+    {
+      id: 4,
+      name: "Competência 4",
+      score: competency4Score,
+      justification: `Foram encontrados ${connectiveCount} conectivo(s) relevantes, o que ajuda a estimar a ligacao entre as partes do texto.`,
+      improvement: "Use mais conectivos variados entre frases e paragrafos para deixar a progressao das ideias mais fluida.",
+    },
+    {
+      id: 5,
+      name: "Competência 5",
+      score: competency5Score,
+      justification: `Na parte final foram percebidos ${interventionComponents} componente(s) ligados a proposta de intervencao, considerando agente, acao, meio, finalidade e detalhamento.`,
+      improvement: "Feche a redacao com agente, acao, meio, finalidade e detalhamento mais explicitos para a proposta de intervencao ficar completa.",
+    },
+  ];
+
+  const sortedCompetencies = [...competencies].sort((left, right) => left.score - right.score);
+  const weakestCompetency = sortedCompetencies[0];
+  const strongestCompetency = sortedCompetencies[sortedCompetencies.length - 1];
+  const totalScore = competencies.reduce((sum, item) => sum + item.score, 0);
+  const highlightedExcerpts = [];
+
+  [sentences[0], sentences[1], sentences.find((item) => countEssayAnalysisMatches(item, ESSAY_LOCAL_INTERVENTION_ACTIONS) > 0), sentences[sentences.length - 1]]
+    .map((item) => sanitizeEssayFeedbackText(item, 220))
+    .forEach((item) => {
+      if (item && !highlightedExcerpts.includes(item) && highlightedExcerpts.length < 4) {
+        highlightedExcerpts.push(item);
+      }
+    });
+
+  return normalizeEssayEvaluation({
+    competencies,
+    totalScore,
+    summaryFeedback: `${fallbackPrefix} Sua nota estimada ficou em ${totalScore} pontos. Hoje, ${strongestCompetency.name} apareceu como ponto mais forte e ${weakestCompetency.name} como principal prioridade de melhora.`,
+    strengths: [
+      `${strongestCompetency.name} foi a melhor competencia nesta leitura automatica.`,
+      paragraphs.length >= 4 ? "A estrutura em paragrafos ja ajuda a sustentar a redacao." : "Ha um esforco de organizacao inicial no texto.",
+      wordCount >= 260 ? "O tamanho do texto ja se aproxima de uma redacao mais desenvolvida." : "O texto ja tem base para evoluir com mais desenvolvimento.",
+    ],
+    mainProblems: [
+      `${weakestCompetency.name} foi a competencia com menor nota nesta estimativa.`,
+      connectiveCount < 3 ? "A coesao ainda depende de poucos conectivos." : "A conexao entre as ideias ainda pode ficar mais refinada.",
+      interventionComponents < 3 ? "A proposta de intervencao ainda esta incompleta ou pouco detalhada." : "A proposta final ainda pode ganhar mais detalhamento.",
+    ],
+    nextSteps: [
+      weakestCompetency.improvement,
+      "Revise a introducao para deixar a tese e o foco do tema mais explicitos.",
+      "Na proxima versao, tente manter quatro paragrafos bem definidos: introducao, dois desenvolvimentos e conclusao.",
+    ],
+    interventionFeedback:
+      interventionComponents >= 4
+        ? "A proposta de intervencao apareceu de forma perceptivel, mas ainda pode ganhar mais detalhamento para subir a nota."
+        : "A proposta de intervencao precisa ficar mais completa, com agente, acao, meio e finalidade mais claros.",
+    highlightedExcerpts,
+  });
+}
+
 function sanitizeEssaySubmissionRow(row, options = {}) {
   if (!row) {
     return null;
@@ -2983,20 +3307,28 @@ async function handleCreateEssaySubmission(request, response) {
     const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, evaluation);
     sendJson(response, 201, { submission });
   } catch (error) {
-    const submission = markEssaySubmissionFailed(
-      user.id,
-      pendingSubmission.id,
-      error?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA."
-    );
-    const statusCode =
-      Number.isInteger(error?.statusCode) && error.statusCode >= 400
-        ? error.statusCode
-        : 502;
+    try {
+      const fallbackEvaluation = buildLocalEssayEvaluation(pendingSubmission, error);
+      const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, fallbackEvaluation);
+      sendJson(response, 201, { submission, fallbackMode: "local" });
+    } catch (fallbackError) {
+      const submission = markEssaySubmissionFailed(
+        user.id,
+        pendingSubmission.id,
+        fallbackError?.message || error?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o."
+      );
+      const statusCode =
+        Number.isInteger(fallbackError?.statusCode) && fallbackError.statusCode >= 400
+          ? fallbackError.statusCode
+          : Number.isInteger(error?.statusCode) && error.statusCode >= 400
+            ? error.statusCode
+            : 502;
 
-    sendJson(response, statusCode, {
-      error: submission.errorMessage || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA.",
-      submission,
-    });
+      sendJson(response, statusCode, {
+        error: submission.errorMessage || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o.",
+        submission,
+      });
+    }
   }
 }
 

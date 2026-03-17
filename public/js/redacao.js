@@ -780,7 +780,12 @@ async function handleSubmit(event) {
     });
 
     renderSubmission(response.submission || null);
-    setFeedback("Reda\u00e7\u00e3o corrigida com sucesso.", "success");
+    setFeedback(
+      response?.fallbackMode === "local"
+        ? "Reda\u00e7\u00e3o corrigida com avalia\u00e7\u00e3o local."
+        : "Reda\u00e7\u00e3o corrigida com sucesso.",
+      "success"
+    );
     await loadSubmissions(response.submission?.id);
   } catch (error) {
     const failedSubmission = error?.payload?.submission || null;
