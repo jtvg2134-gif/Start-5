@@ -91,276 +91,63 @@
       </div>
     </aside>
 
-    <main id="mainContent" class="analytics-dashboard">
-      <section class="dashboard-intro analytics-hero">
-        <div class="analytics-hero-copy">
-          <p class="section-label">Painel analitico</p>
-          <h1 class="progress-title">Seu centro de leitura de desempenho no Start 5</h1>
-          <p class="dashboard-copy">
-            O painel cruza pratica diaria, rotina, redacao, ingles e a estrutura do banco de questoes para mostrar progresso real, risco de queda e proximos focos.
-          </p>
-          <p class="analytics-hero-note" id="analysisPulseLabel">
-            Carregando uma leitura mais inteligente do seu ritmo.
-          </p>
-        </div>
+    <main id="mainContent" class="analytics-dashboard analytics-dashboard-modern analytics-dashboard-focused">
+      <h1 class="visually-hidden">Painel</h1>
 
-        <div class="analytics-hero-actions">
-          <button class="start-button dashboard-start-button" id="startSessionButton" type="button">
-            Registrar pratica
-          </button>
-          <a href="rotina.html" class="menu-link routine-summary-link">Ajustar rotina</a>
-        </div>
-
-        <div class="analytics-hero-pills">
-          <span class="analytics-pill" id="analysisWindowLabel">Leitura dos ultimos 30 dias</span>
-          <span class="analytics-pill analytics-pill-muted" id="analysisCoverageLabel">
-            Montando o retrato dos seus modulos
-          </span>
+      <section class="dashboard-topbar" id="progresso" aria-label="Recorte do painel">
+        <div class="analytics-range" role="tablist" aria-label="Recorte analitico">
+          <button type="button" class="analytics-range-button is-active" data-analytics-range="30d" aria-selected="true">30 dias</button>
+          <button type="button" class="analytics-range-button" data-analytics-range="7d" aria-selected="false">7 dias</button>
+          <button type="button" class="analytics-range-button" data-analytics-range="90d" aria-selected="false">90 dias</button>
+          <button type="button" class="analytics-range-button" data-analytics-range="all" aria-selected="false">Tudo</button>
         </div>
       </section>
 
-      <section class="analytics-summary" id="progresso">
-        <div class="analytics-summary-head">
-          <div>
-            <p class="section-label">Visao geral</p>
-            <h2 class="analysis-title">Resumo executivo do seu desempenho</h2>
-          </div>
-
-          <div class="analytics-range" role="tablist" aria-label="Recorte analitico">
-            <button type="button" class="analytics-range-button is-active" data-analytics-range="30d" aria-selected="true">30 dias</button>
-            <button type="button" class="analytics-range-button" data-analytics-range="7d" aria-selected="false">7 dias</button>
-            <button type="button" class="analytics-range-button" data-analytics-range="90d" aria-selected="false">90 dias</button>
-            <button type="button" class="analytics-range-button" data-analytics-range="all" aria-selected="false">Tudo</button>
-          </div>
-        </div>
-
-        <div class="analytics-metric-grid">
-          <article class="analytics-metric-card" data-tone="primary">
-            <span class="summary-label">Tempo total estudado</span>
-            <strong class="summary-value" id="overviewTotalMinutesValue">0 min</strong>
-            <p class="analytics-metric-copy" id="overviewTotalMinutesHelper">Sem minutos registrados ainda.</p>
-          </article>
-          <article class="analytics-metric-card" data-tone="warm">
-            <span class="summary-label">Dias de sequencia</span>
-            <strong class="summary-value" id="overviewStreakValue">0 dias</strong>
-            <p class="analytics-metric-copy" id="overviewStreakHelper">Sua consistencia aparece aqui.</p>
-          </article>
-          <article class="analytics-metric-card">
-            <span class="summary-label">Questoes respondidas</span>
-            <strong class="summary-value" id="overviewQuestionCountValue">0</strong>
-            <p class="analytics-metric-copy" id="overviewQuestionCountHelper">Estrutura pronta para integrar tentativas.</p>
-          </article>
-          <article class="analytics-metric-card">
-            <span class="summary-label">Redacoes feitas</span>
-            <strong class="summary-value" id="overviewEssayCountValue">0</strong>
-            <p class="analytics-metric-copy" id="overviewEssayCountHelper">Quando houver correcoes, o volume entra aqui.</p>
-          </article>
-          <article class="analytics-metric-card">
-            <span class="summary-label">Media geral de desempenho</span>
-            <strong class="summary-value" id="overviewAveragePerformanceValue">0%</strong>
-            <p class="analytics-metric-copy" id="overviewAveragePerformanceHelper">Combinando o que ja existe no sistema.</p>
-          </article>
-          <article class="analytics-metric-card">
-            <span class="summary-label">Area mais estudada</span>
-            <strong class="summary-value" id="overviewStrongAreaValue">Sem leitura</strong>
-            <p class="analytics-metric-copy" id="overviewStrongAreaHelper">O modulo dominante aparece aqui.</p>
-          </article>
-          <article class="analytics-metric-card" data-tone="danger">
-            <span class="summary-label">Area com mais dificuldade</span>
-            <strong class="summary-value" id="overviewWeakAreaValue">Sem leitura</strong>
-            <p class="analytics-metric-copy" id="overviewWeakAreaHelper">O principal gargalo fica claro aqui.</p>
-          </article>
-          <article class="analytics-metric-card">
-            <span class="summary-label">Consistencia geral</span>
-            <strong class="summary-value" id="overviewConsistencyValue">Baixa</strong>
-            <p class="analytics-metric-copy" id="overviewConsistencyHelper">Leitura baseada em frequencia e ritmo.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-routine" id="semanal">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Analise da rotina</p>
-            <h2 class="analysis-title">Como voce usa o Start 5 ao longo da semana</h2>
-          </div>
-          <p class="module-copy">
-            Uma leitura de comportamento para entender frequencia, horarios, carga por sessao e os pontos em que seu ritmo sobe ou cai.
-          </p>
-        </div>
-
-        <div class="module-metric-grid">
-          <article class="module-metric-card"><span class="summary-label">Dias estudados</span><strong class="summary-value" id="routineDaysStudiedValue">0</strong><p class="analytics-metric-copy" id="routineDaysStudiedHelper">Nenhum dia ativo no recorte.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Horario dominante</span><strong class="summary-value" id="routineBestHourValue">Sem leitura</strong><p class="analytics-metric-copy" id="routineBestHourHelper">Seu pico de atividade aparece aqui.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Media por dia</span><strong class="summary-value" id="routineAverageDayValue">0 min</strong><p class="analytics-metric-copy" id="routineAverageDayHelper">A carga media por dia estudado.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Media por sessao</span><strong class="summary-value" id="routineAverageSessionValue">0 min</strong><p class="analytics-metric-copy" id="routineAverageSessionHelper">O tamanho tipico das suas praticas.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Frequencia semanal</span><strong class="summary-value" id="routineFrequencyValue">0%</strong><p class="analytics-metric-copy" id="routineFrequencyHelper">Quanto da semana realmente teve uso.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Maior intervalo</span><strong class="summary-value" id="routineGapValue">0 dia</strong><p class="analytics-metric-copy" id="routineGapHelper">Onde seu ritmo some por mais tempo.</p></article>
-        </div>
-
-        <div class="module-grid">
-          <article class="module-panel module-panel-wide">
-            <div class="module-panel-head"><div><h3>Ritmo por dia</h3><p>Distribuicao dos minutos para reconhecer constancia e vazios na rotina.</p></div></div>
-            <div class="analytics-mini-chart analytics-mini-chart-columns" id="routineWeekChart"><div class="detail-empty">Sem dados suficientes para o ritmo semanal.</div></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Faixas de horario</h3><p>Janela do dia em que voce mais pratica.</p></div></div>
-            <div class="analytics-mini-chart analytics-mini-chart-columns" id="routineHourChart"><div class="detail-empty">Sem horario dominante ainda.</div></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Leitura de comportamento</h3><p>Resumo do uso real do sistema e dos pontos de oscilacao.</p></div></div>
-            <div class="analytics-list" id="routineBehaviorList"><div class="detail-empty">Registre praticas para destravar a leitura da rotina.</div></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Rotina planejada x realizada</h3><p>O painel cruza o que voce montou na rotina com o que realmente entrou em pratica.</p></div><a href="rotina.html" class="module-link">Abrir rotina</a></div>
-            <div class="analytics-callout">
-              <strong class="analytics-callout-title" id="routineWeekLabel">Semana ainda nao gerada</strong>
-              <p class="analytics-callout-copy" id="routineSummaryText">Defina sua rotina para comparar prioridade, reforco e volume realizado.</p>
+      <section class="dashboard-focus-shell" id="semanal" aria-label="Analise principal do painel">
+        <div id="mensal" class="visually-hidden" aria-hidden="true"></div>
+        <article class="dashboard-focus-card">
+          <div class="dashboard-focus-head">
+            <div>
+              <p class="section-label">Analise principal</p>
+              <h2 class="analysis-title" id="dashboardFocusTitle">Panorama</h2>
             </div>
-            <div class="analytics-stack-list">
-              <article class="analytics-stack-row"><span class="analytics-stack-label">Execucao</span><strong class="analytics-stack-value" id="routineExecutionValue">0%</strong></article>
-              <article class="analytics-stack-row"><span class="analytics-stack-label">Proxima prioridade</span><strong class="analytics-stack-value" id="routinePriorityValue">Defina a rotina</strong></article>
-              <article class="analytics-stack-row"><span class="analytics-stack-label">Reforco</span><strong class="analytics-stack-value" id="routineReinforcementValue">Nenhum</strong></article>
-              <article class="analytics-stack-row"><span class="analytics-stack-label">Planejado x realizado</span><strong class="analytics-stack-value" id="routineMinutesValue">0 min - 0 min</strong></article>
+
+            <div class="dashboard-view-switch" id="dashboardViewSwitch" role="tablist" aria-label="Leitura principal">
+              <button type="button" class="dashboard-view-button is-active" data-dashboard-focus-view="panorama" aria-selected="true">
+                Panorama
+              </button>
+              <button type="button" class="dashboard-view-button" data-dashboard-focus-view="evolucao" aria-selected="false">
+                Evolucao recente
+              </button>
+              <button type="button" class="dashboard-view-button" data-dashboard-focus-view="ritmo" aria-selected="false">
+                Ritmo semanal
+              </button>
             </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-questions">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Banco de questoes</p>
-            <h2 class="analysis-title">Leitura do seu desempenho em questoes</h2>
           </div>
-          <p class="module-copy">Estrutura pronta para receber tentativas reais, comparar vestibulares, materias, assuntos e acompanhar sua taxa de acerto.</p>
-        </div>
 
-        <div class="module-metric-grid">
-          <article class="module-metric-card"><span class="summary-label">Respondidas</span><strong class="summary-value" id="questionAnsweredValue">0</strong><p class="analytics-metric-copy" id="questionAnsweredHelper">Sem tentativas integradas ainda.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Acertadas</span><strong class="summary-value" id="questionCorrectValue">0</strong><p class="analytics-metric-copy" id="questionCorrectHelper">O volume de acertos aparece aqui.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Erradas</span><strong class="summary-value" id="questionWrongValue">0</strong><p class="analytics-metric-copy" id="questionWrongHelper">Erros por recorte entram neste bloco.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Taxa de acerto</span><strong class="summary-value" id="questionAccuracyValue">0%</strong><p class="analytics-metric-copy" id="questionAccuracyHelper">Quando houver dados, a tendencia fica clara.</p></article>
-        </div>
+          <div class="dashboard-focus-body">
+            <div class="dashboard-focus-stage">
+              <div class="dashboard-focus-chart-frame">
+                <div class="dashboard-focus-chart-top">
+                  <p class="dashboard-focus-kicker">Leitura ativa do recorte selecionado</p>
+                  <div class="dashboard-focus-legend" id="dashboardFocusLegend" aria-label="Legenda do grafico"></div>
+                </div>
 
-        <div class="module-grid">
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Vestibulares</h3><p>Onde seu desempenho sobe e onde ele precisa de reforco.</p></div></div><div class="analytics-list" id="questionExamList"><div class="detail-empty">Sem dados de vestibular ainda.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Materias e assuntos</h3><p>As materias com melhor taxa de acerto e os pontos de maior erro.</p></div></div><div class="analytics-list" id="questionSubjectList"><div class="detail-empty">As materias mais fortes e mais fracas aparecem aqui.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Evolucao recente</h3><p>Historico pronto para mostrar melhora ou queda nas ultimas tentativas.</p></div></div><div class="analytics-mini-chart analytics-mini-chart-columns" id="questionTrendChart"><div class="detail-empty">Nenhuma serie de tentativas encontrada.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Insights do modulo</h3><p>Quando as questoes forem integradas, o Start 5 interpreta vestibular, materia e tendencia.</p></div></div><div class="analytics-insight-list" id="questionInsightList"><div class="detail-empty">Modulo pronto para receber dados reais de questoes.</div></div></article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-essay" id="mensal">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Redacao</p>
-            <h2 class="analysis-title">Evolucao da sua escrita por nota e competencia</h2>
-          </div>
-          <p class="module-copy">Aqui o painel cruza volume, media, estabilidade e repeticao de erro nas cinco competencias para indicar o que precisa subir primeiro.</p>
-        </div>
-
-        <div class="module-metric-grid">
-          <article class="module-metric-card"><span class="summary-label">Total de redacoes</span><strong class="summary-value" id="essayTotalValue">0</strong><p class="analytics-metric-copy" id="essayTotalHelper">Nenhuma redacao corrigida ainda.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Media geral</span><strong class="summary-value" id="essayAverageValue">0 / 1000</strong><p class="analytics-metric-copy" id="essayAverageHelper">A media do recorte aparece aqui.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Ultima nota</span><strong class="summary-value" id="essayLastScoreValue">Sem nota</strong><p class="analytics-metric-copy" id="essayLastScoreHelper">A leitura mais recente do seu texto.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Melhor nota</span><strong class="summary-value" id="essayBestScoreValue">Sem nota</strong><p class="analytics-metric-copy" id="essayBestScoreHelper">Seu teto atual de desempenho.</p></article>
-          <article class="module-metric-card" data-tone="danger"><span class="summary-label">Competencia mais fraca</span><strong class="summary-value" id="essayWeakCompetencyValue">Sem leitura</strong><p class="analytics-metric-copy" id="essayWeakCompetencyHelper">O ponto que mais derruba sua nota.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Competencia mais estavel</span><strong class="summary-value" id="essayStableCompetencyValue">Sem leitura</strong><p class="analytics-metric-copy" id="essayStableCompetencyHelper">A competencia que mais se sustenta.</p></article>
-        </div>
-
-        <div class="module-grid">
-          <article class="module-panel module-panel-wide"><div class="module-panel-head"><div><h3>Evolucao das notas</h3><p>Uma linha de leitura simples para enxergar melhora, estabilidade ou queda.</p></div></div><div class="analytics-mini-chart analytics-mini-chart-columns" id="essayTrendChart"><div class="detail-empty">Sem historico de redacoes para comparar.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Mapa das competencias</h3><p>Fica claro quais competencias precisam de mais atencao e quais estao evoluindo.</p></div></div><div class="analytics-list" id="essayCompetencyBoard"><div class="detail-empty">As competencias avaliadas aparecem aqui.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Temas ja trabalhados</h3><p>Recortes mais usados para entender repertorio e repeticao.</p></div></div><div class="analytics-list" id="essayThemeList"><div class="detail-empty">Quando voce escrever, os temas entram aqui.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Insights automaticos</h3><p>Leituras objetivas sobre crescimento, instabilidade e repeticao de erro.</p></div></div><div class="analytics-insight-list" id="essayInsightList"><div class="detail-empty">Envie redacoes para receber insights por competencia.</div></div></article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-english">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Ingles</p>
-            <h2 class="analysis-title">Consistencia, verbos e observacoes das praticas de ingles</h2>
-          </div>
-          <p class="module-copy">Um recorte do ingles para mostrar volume dedicado, frequencia recente, verbos recorrentes e o tipo de pratica que realmente aparece no seu dia a dia.</p>
-        </div>
-
-        <div class="module-metric-grid">
-          <article class="module-metric-card"><span class="summary-label">Praticas de ingles</span><strong class="summary-value" id="englishPracticeCountValue">0</strong><p class="analytics-metric-copy" id="englishPracticeCountHelper">Nenhuma pratica de ingles no recorte.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Tempo dedicado</span><strong class="summary-value" id="englishMinutesValue">0 min</strong><p class="analytics-metric-copy" id="englishMinutesHelper">Carga total dedicada ao ingles.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Verbos estudados</span><strong class="summary-value" id="englishVerbCountValue">0</strong><p class="analytics-metric-copy" id="englishVerbCountHelper">Volume de verbos unicos revisados.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Ultima observacao</span><strong class="summary-value" id="englishObservationValue">Sem observacao</strong><p class="analytics-metric-copy" id="englishObservationHelper">O ultimo registro relevante da pratica.</p></article>
-          <article class="module-metric-card"><span class="summary-label">Consistencia</span><strong class="summary-value" id="englishConsistencyValue">Baixa</strong><p class="analytics-metric-copy" id="englishConsistencyHelper">Leitura simples da frequencia de ingles.</p></article>
-        </div>
-
-        <div class="module-grid">
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Verbos mais recorrentes</h3><p>Quais verbos realmente aparecem nas suas praticas.</p></div></div><div class="detail-chip-list" id="englishVerbList"><span class="detail-empty">Nenhum verbo registrado no recorte.</span></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Observacoes recentes</h3><p>As anotacoes curtas salvas nas praticas de ingles.</p></div></div><div class="analytics-list" id="englishObservationList"><div class="detail-empty">Sem observacoes recentes de ingles.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Ritmo recente</h3><p>Leitura da frequencia de ingles dentro do recorte selecionado.</p></div></div><div class="analytics-mini-chart analytics-mini-chart-columns" id="englishTrendChart"><div class="detail-empty">O ritmo de ingles aparece aqui quando houver dados.</div></div></article>
-          <article class="module-panel"><div class="module-panel-head"><div><h3>Insights do ingles</h3><p>O painel identifica consistencia, volume e sinais de abandono do idioma.</p></div></div><div class="analytics-insight-list" id="englishInsightList"><div class="detail-empty">Sem leitura suficiente para gerar insights de ingles.</div></div></article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-recommendations">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Recomendacoes inteligentes</p>
-            <h2 class="analysis-title">O que vale priorizar agora</h2>
-          </div>
-          <p class="module-copy">O Start 5 interpreta seu ritmo, cruzando rotina, escrita, ingles e as lacunas de uso para sugerir proximos movimentos praticos.</p>
-        </div>
-
-        <div class="recommendation-list" id="dashboardRecommendationsList">
-          <article class="recommendation-card">
-            <strong>As recomendacoes aparecem aqui</strong>
-            <p>Assim que houver historico suficiente, o painel vai indicar prioridades reais de retomada e reforco.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="dashboard-module analytics-module analytics-module-history" id="historico">
-        <div class="module-head">
-          <div>
-            <p class="section-label">Historico vivo</p>
-            <h2 class="analysis-title">Hoje, ultimas praticas e ultima escrita</h2>
-          </div>
-          <p class="module-copy">Uma area para consultar o dia atual, editar registros recentes e enxergar a ultima camada de comportamento do seu estudo.</p>
-        </div>
-
-        <div class="analytics-snapshot-grid">
-          <article class="analytics-snapshot-card"><span class="summary-label">Hoje</span><strong class="snapshot-title" id="todayDateLabel">Data nao registrada</strong><p class="snapshot-copy">Resumo rapido do seu dia dentro da plataforma.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Minutos</span><strong class="snapshot-title" id="todayMinutesValue">0 min</strong><p class="snapshot-copy">Carga total registrada hoje.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Praticas</span><strong class="snapshot-title" id="todayCountValue">0</strong><p class="snapshot-copy">Numero de sessoes salvas hoje.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Frente ativa</span><strong class="snapshot-title" id="todayActivitiesValue">Nenhuma</strong><p class="snapshot-copy">As materias mais presentes do dia.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Verbos</span><strong class="snapshot-title" id="todayVerbsValue">Nenhum</strong><p class="snapshot-copy">Quais verbos apareceram hoje.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Observacao-chave</span><strong class="snapshot-title" id="todayPhraseCountValue">Nenhuma</strong><p class="snapshot-copy">O tema ou observacao mais visivel do dia.</p></article>
-          <article class="analytics-snapshot-card"><span class="summary-label">Ritmo do dia</span><strong class="snapshot-title" id="todayStateValue">Livre</strong><p class="snapshot-copy">Leitura curta da intensidade atual.</p></article>
-        </div>
-
-        <div class="module-grid">
-          <article class="module-panel module-panel-wide">
-            <div class="module-panel-head"><div><h3>Destaque de hoje</h3><p>O painel resume o que realmente aconteceu no dia atual.</p></div></div>
-            <div class="analytics-callout analytics-callout-spotlight">
-              <strong class="analytics-callout-title" id="todayHighlightTitle">Nenhuma pratica registrada hoje.</strong>
-              <p class="analytics-callout-copy" id="todayHighlightText">Quando voce salvar a primeira sessao, este bloco vai mostrar a materia principal, o tema estudado e o ritmo do dia.</p>
+                <div class="dashboard-focus-chart" id="dashboardFocusChart"></div>
+              </div>
             </div>
-            <div class="detail-chip-list" id="todayActivitiesList"><span class="detail-empty">Nenhuma materia registrada.</span></div>
-            <div class="detail-chip-list" id="todayVerbsList"><span class="detail-empty">Nenhum verbo de ingles registrado.</span></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Sessoes de hoje</h3><p>Edite ou apague o que foi salvo no dia atual.</p></div></div>
-            <div class="session-list" id="todaySessionsList"><div class="session-empty">Voce ainda nao registrou nenhuma pratica hoje.</div></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Ultimas praticas</h3><p>Historico recente para consulta rapida e manutencao do painel.</p></div></div>
-            <div class="session-list" id="recentSessionsList"><div class="session-empty">Nenhuma pratica recente.</div></div>
-          </article>
-          <article class="module-panel">
-            <div class="module-panel-head"><div><h3>Ultimas redacoes</h3><p>Uma linha curta com suas correcoes mais recentes.</p></div></div>
-            <div class="analytics-list" id="recentEssayTimeline"><div class="detail-empty">Nenhuma redacao avaliada ate agora.</div></div>
-          </article>
-        </div>
+
+            <aside class="dashboard-focus-sidebar" aria-label="Resumo do panorama">
+              <p class="dashboard-focus-note" id="dashboardFocusNote">
+                Curvas normalizadas para comparar tendencia. Passe o mouse para ver os valores reais.
+              </p>
+
+              <div class="dashboard-focus-metrics" id="dashboardFocusMetrics"></div>
+            </aside>
+          </div>
+
+          <div id="historico" class="visually-hidden" aria-hidden="true"></div>
+        </article>
       </section>
     </main>
 

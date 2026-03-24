@@ -102,6 +102,7 @@ const panelTabButtons = [...document.querySelectorAll("[data-panel-tab]")];
 const panelSections = [...document.querySelectorAll("[data-panel-section]")];
 const dashboardViewCopy = document.getElementById("dashboardViewCopy");
 const analyticsRangeButtons = [...document.querySelectorAll("[data-analytics-range]")];
+const dashboardFocusViewButtons = [...document.querySelectorAll("[data-dashboard-focus-view]")];
 const analyticsDom = {
   analysisPulseLabel: document.getElementById("analysisPulseLabel"),
   analysisWindowLabel: document.getElementById("analysisWindowLabel"),
@@ -181,6 +182,60 @@ const analyticsDom = {
   englishInsightList: document.getElementById("englishInsightList"),
   dashboardRecommendationsList: document.getElementById("dashboardRecommendationsList"),
   recentEssayTimeline: document.getElementById("recentEssayTimeline"),
+};
+
+const modernDashboardDom = {
+  modernHeroTotalMinutes: document.getElementById("modernHeroTotalMinutes"),
+  modernHeroTotalMinutesHelper: document.getElementById("modernHeroTotalMinutesHelper"),
+  modernHeroQuestionAccuracy: document.getElementById("modernHeroQuestionAccuracy"),
+  modernHeroQuestionAccuracyHelper: document.getElementById("modernHeroQuestionAccuracyHelper"),
+  modernHeroEssayAverage: document.getElementById("modernHeroEssayAverage"),
+  modernHeroEssayAverageHelper: document.getElementById("modernHeroEssayAverageHelper"),
+  modernHeroConsistency: document.getElementById("modernHeroConsistency"),
+  modernHeroConsistencyHelper: document.getElementById("modernHeroConsistencyHelper"),
+  modernHeroFocusArea: document.getElementById("modernHeroFocusArea"),
+  modernHeroFocusAreaHelper: document.getElementById("modernHeroFocusAreaHelper"),
+  cardOverallSessionsValue: document.getElementById("cardOverallSessionsValue"),
+  cardOverallTimeValue: document.getElementById("cardOverallTimeValue"),
+  cardOverallBestValue: document.getElementById("cardOverallBestValue"),
+  cardOverallWeakValue: document.getElementById("cardOverallWeakValue"),
+  dashboardOverallCardChart: document.getElementById("dashboardOverallCardChart"),
+  cardRoutineDaysValue: document.getElementById("cardRoutineDaysValue"),
+  cardRoutineStreakValue: document.getElementById("cardRoutineStreakValue"),
+  cardRoutineAverageValue: document.getElementById("cardRoutineAverageValue"),
+  cardRoutineFrequencyValue: document.getElementById("cardRoutineFrequencyValue"),
+  dashboardRoutineCardChart: document.getElementById("dashboardRoutineCardChart"),
+  cardQuestionsTotalValue: document.getElementById("cardQuestionsTotalValue"),
+  cardQuestionsAccuracyValue: document.getElementById("cardQuestionsAccuracyValue"),
+  cardQuestionsErrorsValue: document.getElementById("cardQuestionsErrorsValue"),
+  cardQuestionsWeakSubjectValue: document.getElementById("cardQuestionsWeakSubjectValue"),
+  dashboardQuestionsCardChart: document.getElementById("dashboardQuestionsCardChart"),
+  cardEssayTotalValue: document.getElementById("cardEssayTotalValue"),
+  cardEssayAverageValue: document.getElementById("cardEssayAverageValue"),
+  cardEssayLastValue: document.getElementById("cardEssayLastValue"),
+  cardEssayWeakValue: document.getElementById("cardEssayWeakValue"),
+  dashboardEssayCardChart: document.getElementById("dashboardEssayCardChart"),
+  cardEnglishCountValue: document.getElementById("cardEnglishCountValue"),
+  cardEnglishMinutesValue: document.getElementById("cardEnglishMinutesValue"),
+  cardEnglishVerbValue: document.getElementById("cardEnglishVerbValue"),
+  cardEnglishFrequencyValue: document.getElementById("cardEnglishFrequencyValue"),
+  dashboardEnglishCardChart: document.getElementById("dashboardEnglishCardChart"),
+  dashboardOverallTrendHelper: document.getElementById("dashboardOverallTrendHelper"),
+  dashboardOverallTrendChart: document.getElementById("dashboardOverallTrendChart"),
+  dashboardRoutineTrendChart: document.getElementById("dashboardRoutineTrendChart"),
+  dashboardRoutineSummaryList: document.getElementById("dashboardRoutineSummaryList"),
+  dashboardQuestionTrendChartModern: document.getElementById("dashboardQuestionTrendChartModern"),
+  dashboardQuestionSummaryList: document.getElementById("dashboardQuestionSummaryList"),
+  dashboardEssayTrendChartModern: document.getElementById("dashboardEssayTrendChartModern"),
+  dashboardEssaySummaryList: document.getElementById("dashboardEssaySummaryList"),
+  dashboardEnglishTrendChartModern: document.getElementById("dashboardEnglishTrendChartModern"),
+  dashboardEnglishSummaryList: document.getElementById("dashboardEnglishSummaryList"),
+  dashboardRecommendationsListModern: document.getElementById("dashboardRecommendationsListModern"),
+  dashboardFocusTitle: document.getElementById("dashboardFocusTitle"),
+  dashboardFocusNote: document.getElementById("dashboardFocusNote"),
+  dashboardFocusLegend: document.getElementById("dashboardFocusLegend"),
+  dashboardFocusChart: document.getElementById("dashboardFocusChart"),
+  dashboardFocusMetrics: document.getElementById("dashboardFocusMetrics"),
 };
 
 const MIN_SESSION_MINUTES = 10;
@@ -377,6 +432,7 @@ let isSavingSession = false;
 let isDeletingSession = false;
 let isCustomVerbMode = false;
 let analyticsRange = "30d";
+let dashboardFocusView = "panorama";
 
 function isDialogElement(element) {
   return typeof HTMLDialogElement !== "undefined" && element instanceof HTMLDialogElement;
@@ -1440,6 +1496,20 @@ function loadQuestionAttemptsFromStorage() {
     .sort((left, right) => (getQuestionAttemptDate(right)?.getTime() || 0) - (getQuestionAttemptDate(left)?.getTime() || 0));
 }
 
+async function loadQuestionAttemptsFromApi() {
+  try {
+    const response = await window.Start5Auth.apiRequest("/api/question-bank/analytics?limit=1200");
+    const attempts = Array.isArray(response?.attempts) ? response.attempts : [];
+
+    questionAttempts = attempts
+      .map((attempt) => normalizeQuestionAttempt(attempt))
+      .sort((left, right) => (getQuestionAttemptDate(right)?.getTime() || 0) - (getQuestionAttemptDate(left)?.getTime() || 0));
+  } catch (error) {
+    console.warn("Nao foi possivel carregar tentativas reais do banco de questoes. Usando fallback local.", error);
+    loadQuestionAttemptsFromStorage();
+  }
+}
+
 function getQuestionAttemptsForRange(range = analyticsRange) {
   return filterItemsByRange(questionAttempts, (attempt) => getQuestionAttemptDate(attempt), range).sort(
     (left, right) => (getQuestionAttemptDate(right)?.getTime() || 0) - (getQuestionAttemptDate(left)?.getTime() || 0)
@@ -2017,6 +2087,15 @@ function setTextContent(element, value) {
   if (element) {
     element.textContent = value;
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function createInsightCard(title, copy) {
@@ -4302,20 +4381,746 @@ function renderHistoryAnalytics(rangeEssays) {
   );
 }
 
+function createCompactAnalyticsRow(title, subtitle, meta) {
+  const row = document.createElement("article");
+  row.className = "dashboard-compact-row";
+
+  const copy = document.createElement("div");
+  const titleNode = document.createElement("strong");
+  titleNode.textContent = title;
+  const subtitleNode = document.createElement("span");
+  subtitleNode.textContent = subtitle;
+
+  copy.appendChild(titleNode);
+  copy.appendChild(subtitleNode);
+
+  const metaNode = document.createElement("em");
+  metaNode.textContent = meta;
+
+  row.appendChild(copy);
+  row.appendChild(metaNode);
+  return row;
+}
+
+function renderCompactAnalyticsRows(container, rows, emptyMessage) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (!rows.length) {
+    container.appendChild(createEmptyMessage(emptyMessage));
+    return;
+  }
+
+  rows.forEach((row) => {
+    container.appendChild(createCompactAnalyticsRow(row.title, row.subtitle, row.meta));
+  });
+}
+
+function buildSessionTimelinePoints(list, limit = 8) {
+  const grouped = new Map();
+
+  sortSessionsByStartDesc(list).forEach((session) => {
+    const dateKey = session.dateKey || toDateKey(getSessionStartDate(session));
+    grouped.set(dateKey, roundOne((grouped.get(dateKey) || 0) + (Number(session.minutes) || 0)));
+  });
+
+  return [...grouped.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .slice(-limit)
+    .map(([dateKey, minutes]) => ({
+      label: formatShortDate(dateKey),
+      value: minutes,
+    }));
+}
+
+function buildOverallTrendPoints(rangeSessions, rangeQuestions, rangeEssays, limit = 8) {
+  const grouped = new Map();
+
+  rangeSessions.forEach((session) => {
+    const dateKey = session.dateKey || toDateKey(getSessionStartDate(session));
+    const current = grouped.get(dateKey) || 0;
+    grouped.set(dateKey, current + (Number(session.minutes) || 0));
+  });
+
+  rangeQuestions.forEach((attempt) => {
+    const dateKey = toDateKey(getQuestionAttemptDate(attempt) || new Date());
+    const current = grouped.get(dateKey) || 0;
+    grouped.set(dateKey, current + (attempt.isCorrect ? 18 : 9));
+  });
+
+  rangeEssays.forEach((essay) => {
+    const referenceDate = getEssayReferenceDate(essay);
+    const dateKey = toDateKey(referenceDate || new Date());
+    const current = grouped.get(dateKey) || 0;
+    grouped.set(dateKey, current + Math.max(24, roundOne((Number(essay.totalScore) || 0) / 20)));
+  });
+
+  return [...grouped.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .slice(-limit)
+    .map(([dateKey, value]) => ({
+      label: formatShortDate(dateKey),
+      value: roundOne(value),
+    }));
+}
+
+function renderLineChart(container, points, emptyMessage, formatValue = (value) => String(value)) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (!points.length || points.every((point) => Number(point.value) <= 0)) {
+    container.appendChild(createEmptyMessage(emptyMessage));
+    return;
+  }
+
+  const normalizedPoints = points.map((point) => ({
+    label: point.label,
+    value: Number(point.value) || 0,
+  }));
+  const maxValue = Math.max(...normalizedPoints.map((point) => point.value), 1);
+  const width = 100;
+  const height = 100;
+  const usableHeight = 72;
+  const startY = 14;
+  const stepX = normalizedPoints.length > 1 ? width / (normalizedPoints.length - 1) : 0;
+
+  const coordinates = normalizedPoints.map((point, index) => {
+    const x = normalizedPoints.length === 1 ? width / 2 : stepX * index;
+    const y = startY + (usableHeight - ((point.value / maxValue) * usableHeight));
+    return { x, y, point };
+  });
+
+  const linePath = coordinates
+    .map((coordinate, index) => `${index === 0 ? "M" : "L"} ${coordinate.x.toFixed(2)} ${coordinate.y.toFixed(2)}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${coordinates[coordinates.length - 1].x.toFixed(2)} ${(startY + usableHeight).toFixed(2)} L ${coordinates[0].x.toFixed(2)} ${(startY + usableHeight).toFixed(2)} Z`;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "line-chart";
+
+  const svg = createSvgElement("svg");
+  svg.classList.add("line-chart-svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  [0, 0.5, 1].forEach((ratio) => {
+    const grid = createSvgElement("line");
+    const y = startY + (usableHeight * ratio);
+    grid.setAttribute("x1", "0");
+    grid.setAttribute("x2", String(width));
+    grid.setAttribute("y1", y.toFixed(2));
+    grid.setAttribute("y2", y.toFixed(2));
+    grid.setAttribute("class", "line-chart-grid");
+    svg.appendChild(grid);
+  });
+
+  const area = createSvgElement("path");
+  area.setAttribute("d", areaPath);
+  area.setAttribute("class", "line-chart-area");
+  svg.appendChild(area);
+
+  const path = createSvgElement("path");
+  path.setAttribute("d", linePath);
+  path.setAttribute("class", "line-chart-path");
+  svg.appendChild(path);
+
+  coordinates.forEach((coordinate) => {
+    const point = createSvgElement("circle");
+    point.setAttribute("cx", coordinate.x.toFixed(2));
+    point.setAttribute("cy", coordinate.y.toFixed(2));
+    point.setAttribute("r", "2.8");
+    point.setAttribute("class", "line-chart-point");
+    point.setAttribute("aria-label", `${coordinate.point.label}: ${formatValue(coordinate.point.value, coordinate.point)}`);
+    svg.appendChild(point);
+  });
+
+  const labels = document.createElement("div");
+  labels.className = "line-chart-labels";
+  labels.style.setProperty("--chart-count", String(normalizedPoints.length));
+
+  normalizedPoints.forEach((point) => {
+    const label = document.createElement("span");
+    label.textContent = point.label;
+    labels.appendChild(label);
+  });
+
+  wrapper.appendChild(svg);
+  wrapper.appendChild(labels);
+  container.appendChild(wrapper);
+}
+
+function buildValueMapByDate(list, getDateKey, getValue) {
+  const map = new Map();
+
+  list.forEach((item) => {
+    const dateKey = String(getDateKey(item) || "").trim();
+
+    if (!dateKey) {
+      return;
+    }
+
+    map.set(dateKey, roundOne((map.get(dateKey) || 0) + (Number(getValue(item)) || 0)));
+  });
+
+  return map;
+}
+
+function buildQuestionStatsMapByDate(list) {
+  const map = new Map();
+
+  list.forEach((attempt) => {
+    const date = getQuestionAttemptDate(attempt);
+
+    if (!isValidDate(date)) {
+      return;
+    }
+
+    const dateKey = toDateKey(date);
+    const current = map.get(dateKey) || { total: 0, correct: 0 };
+    current.total += 1;
+    current.correct += attempt.isCorrect ? 1 : 0;
+    map.set(dateKey, current);
+  });
+
+  return map;
+}
+
+function buildEssayStatsMapByDate(list) {
+  const map = new Map();
+
+  list.forEach((essay) => {
+    const date = getEssayReferenceDate(essay);
+
+    if (!isValidDate(date)) {
+      return;
+    }
+
+    const dateKey = toDateKey(date);
+    const current = map.get(dateKey) || { total: 0, score: 0 };
+    current.total += 1;
+    current.score += Number(essay.totalScore) || 0;
+    map.set(dateKey, current);
+  });
+
+  return map;
+}
+
+function buildOverallScoreMapByDate(rangeSessions, rangeQuestions, rangeEssays) {
+  const map = new Map();
+
+  rangeSessions.forEach((session) => {
+    const dateKey = session.dateKey || toDateKey(getSessionStartDate(session));
+    map.set(dateKey, roundOne((map.get(dateKey) || 0) + (Number(session.minutes) || 0)));
+  });
+
+  rangeQuestions.forEach((attempt) => {
+    const date = getQuestionAttemptDate(attempt);
+
+    if (!isValidDate(date)) {
+      return;
+    }
+
+    const dateKey = toDateKey(date);
+    map.set(dateKey, roundOne((map.get(dateKey) || 0) + (attempt.isCorrect ? 18 : 9)));
+  });
+
+  rangeEssays.forEach((essay) => {
+    const date = getEssayReferenceDate(essay);
+
+    if (!isValidDate(date)) {
+      return;
+    }
+
+    const dateKey = toDateKey(date);
+    map.set(dateKey, roundOne((map.get(dateKey) || 0) + Math.max(24, roundOne((Number(essay.totalScore) || 0) / 20))));
+  });
+
+  return map;
+}
+
+function getDashboardFocusDateKeys(rangeSessions, rangeQuestions, rangeEssays, limit = 8) {
+  const keys = new Set();
+
+  rangeSessions.forEach((session) => {
+    const dateKey = String(session.dateKey || toDateKey(getSessionStartDate(session)) || "").trim();
+    if (dateKey) {
+      keys.add(dateKey);
+    }
+  });
+
+  rangeQuestions.forEach((attempt) => {
+    const date = getQuestionAttemptDate(attempt);
+    if (isValidDate(date)) {
+      keys.add(toDateKey(date));
+    }
+  });
+
+  rangeEssays.forEach((essay) => {
+    const date = getEssayReferenceDate(essay);
+    if (isValidDate(date)) {
+      keys.add(toDateKey(date));
+    }
+  });
+
+  return [...keys].sort((left, right) => left.localeCompare(right)).slice(-limit);
+}
+
+function buildWeekdayCountPoints(list, getDate) {
+  return WEEKDAY_LABELS.map((label, index) => {
+    const value = list.reduce((total, item) => {
+      const date = getDate(item);
+
+      if (!isValidDate(date)) {
+        return total;
+      }
+
+      const weekdayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+      return weekdayIndex === index ? total + 1 : total;
+    }, 0);
+
+    return { label, value };
+  });
+}
+
+function formatCountLabel(value, singular, plural) {
+  const rounded = Math.round(Number(value) || 0);
+  return `${rounded} ${rounded === 1 ? singular : plural}`;
+}
+
+function updateDashboardFocusViewUI() {
+  dashboardFocusViewButtons.forEach((button) => {
+    const isActive = String(button.dataset.dashboardFocusView || "") === dashboardFocusView;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+}
+
+function buildDashboardFocusConfig(rangeSessions, rangeEssays, rangeQuestions) {
+  const englishSessions = rangeSessions.filter((session) => session.subjectKey === DEFAULT_SUBJECT_KEY);
+  const totalMinutes = sumMinutes(rangeSessions);
+  const activeDays = countActiveDays(rangeSessions);
+  const routineFrequency = rangeSessions.length
+    ? roundOne((activeDays / getRangeDayCount()) * 100)
+    : 0;
+  const questionCount = rangeQuestions.length;
+  const questionCorrect = rangeQuestions.filter((attempt) => attempt.isCorrect).length;
+  const questionAccuracy = questionCount ? roundOne((questionCorrect / questionCount) * 100) : 0;
+  const essayAverage = getEssayAverageScore(rangeEssays);
+  const recentDateKeys = getDashboardFocusDateKeys(rangeSessions, rangeQuestions, rangeEssays, 8);
+  const sessionMinutesMap = buildValueMapByDate(
+    rangeSessions,
+    (session) => session.dateKey || toDateKey(getSessionStartDate(session)),
+    (session) => session.minutes
+  );
+  const englishMinutesMap = buildValueMapByDate(
+    englishSessions,
+    (session) => session.dateKey || toDateKey(getSessionStartDate(session)),
+    (session) => session.minutes
+  );
+  const questionStatsMap = buildQuestionStatsMapByDate(rangeQuestions);
+  const essayStatsMap = buildEssayStatsMapByDate(rangeEssays);
+  const overallScoreMap = buildOverallScoreMapByDate(rangeSessions, rangeQuestions, rangeEssays);
+  const labels = recentDateKeys.map((dateKey) => formatShortDate(dateKey));
+  const metrics = [
+    { label: "Tempo total", value: formatMinutesOnly(totalMinutes) },
+    { label: "Frequencia", value: formatPercent(routineFrequency) },
+    { label: "Questoes", value: formatPercent(questionAccuracy) },
+    { label: "Redacao", value: rangeEssays.length ? `${Math.round(essayAverage)} / 1000` : "0 / 1000" },
+  ];
+
+  const panoramaConfig = {
+    title: "Panorama",
+    note: "Curvas normalizadas para comparar tendencia. Passe o mouse para ver os valores reais.",
+    emptyMessage: "Sem dados suficientes para montar o panorama.",
+    labels,
+    metrics,
+    series: [
+      {
+        label: "Indice geral",
+        color: "#8db4ff",
+        points: recentDateKeys.map((dateKey) => ({
+          value: overallScoreMap.get(dateKey) || 0,
+        })),
+        formatValue: (point) => `${Math.round(point.value || 0)} pts`,
+      },
+      {
+        label: "Consistencia",
+        color: "#f0c16b",
+        points: recentDateKeys.map((dateKey) => ({
+          value: sessionMinutesMap.get(dateKey) ? 100 : 0,
+        })),
+        formatValue: (point) => (point.value ? "Dia ativo" : "Sem registro"),
+      },
+      {
+        label: "Questoes",
+        color: "#7ed8c2",
+        points: recentDateKeys.map((dateKey) => {
+          const stats = questionStatsMap.get(dateKey) || { total: 0, correct: 0 };
+          return {
+            value: stats.total ? roundOne((stats.correct / stats.total) * 100) : 0,
+            meta: stats,
+          };
+        }),
+        formatValue: (point) => (
+          point.meta?.total
+            ? `${formatPercent(point.value)} em ${formatCountLabel(point.meta.total, "tentativa", "tentativas")}`
+            : "Sem tentativas"
+        ),
+      },
+      {
+        label: "Redacao",
+        color: "#f3a6c6",
+        points: recentDateKeys.map((dateKey) => {
+          const stats = essayStatsMap.get(dateKey) || { total: 0, score: 0 };
+          return {
+            value: stats.total ? roundOne(stats.score / stats.total) : 0,
+            meta: stats,
+          };
+        }),
+        formatValue: (point) => (
+          point.meta?.total
+            ? `${Math.round(point.value || 0)} / 1000`
+            : "Sem redacoes"
+        ),
+      },
+    ],
+  };
+
+  const evolutionConfig = {
+    title: "Evolucao recente",
+    note: "Uso por modulo no recorte atual. Passe o mouse para comparar volume e presenca recente.",
+    emptyMessage: "Sem dados suficientes para montar a evolucao.",
+    labels,
+    metrics,
+    series: [
+      {
+        label: "Estudo",
+        color: "#8db4ff",
+        points: recentDateKeys.map((dateKey) => ({
+          value: sessionMinutesMap.get(dateKey) || 0,
+        })),
+        formatValue: (point) => formatMinutesOnly(point.value || 0),
+      },
+      {
+        label: "Ingles",
+        color: "#c7b3ff",
+        points: recentDateKeys.map((dateKey) => ({
+          value: englishMinutesMap.get(dateKey) || 0,
+        })),
+        formatValue: (point) => formatMinutesOnly(point.value || 0),
+      },
+      {
+        label: "Questoes",
+        color: "#7ed8c2",
+        points: recentDateKeys.map((dateKey) => {
+          const stats = questionStatsMap.get(dateKey) || { total: 0, correct: 0 };
+          return { value: stats.total, meta: stats };
+        }),
+        formatValue: (point) => formatCountLabel(point.value, "resposta", "respostas"),
+      },
+      {
+        label: "Redacao",
+        color: "#f3a6c6",
+        points: recentDateKeys.map((dateKey) => {
+          const stats = essayStatsMap.get(dateKey) || { total: 0, score: 0 };
+          return { value: stats.total, meta: stats };
+        }),
+        formatValue: (point) => formatCountLabel(point.value, "redacao", "redacoes"),
+      },
+    ],
+  };
+
+  const rhythmConfig = {
+    title: "Ritmo semanal",
+    note: "Distribuicao da semana por modulo. Passe o mouse para ver onde o ritmo concentra mais volume.",
+    emptyMessage: "Sem dados suficientes para montar o ritmo semanal.",
+    labels: WEEKDAY_LABELS,
+    metrics,
+    series: [
+      {
+        label: "Estudo",
+        color: "#8db4ff",
+        points: buildWeekdayAggregatePoints(rangeSessions).map((point) => ({ value: point.value })),
+        formatValue: (point) => formatMinutesOnly(point.value || 0),
+      },
+      {
+        label: "Ingles",
+        color: "#c7b3ff",
+        points: buildWeekdayAggregatePoints(englishSessions).map((point) => ({ value: point.value })),
+        formatValue: (point) => formatMinutesOnly(point.value || 0),
+      },
+      {
+        label: "Questoes",
+        color: "#7ed8c2",
+        points: buildWeekdayCountPoints(rangeQuestions, (attempt) => getQuestionAttemptDate(attempt)).map((point) => ({
+          value: point.value,
+        })),
+        formatValue: (point) => formatCountLabel(point.value, "tentativa", "tentativas"),
+      },
+      {
+        label: "Redacao",
+        color: "#f3a6c6",
+        points: buildWeekdayCountPoints(rangeEssays, (essay) => getEssayReferenceDate(essay)).map((point) => ({
+          value: point.value,
+        })),
+        formatValue: (point) => formatCountLabel(point.value, "redacao", "redacoes"),
+      },
+    ],
+  };
+
+  const viewConfigMap = {
+    panorama: panoramaConfig,
+    evolucao: evolutionConfig,
+    ritmo: rhythmConfig,
+  };
+
+  return viewConfigMap[dashboardFocusView] || panoramaConfig;
+}
+
+function renderDashboardFocusLegend(series) {
+  const container = modernDashboardDom.dashboardFocusLegend;
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = (Array.isArray(series) ? series : []).map((item) => `
+    <span class="dashboard-focus-legend-item">
+      <span class="dashboard-focus-legend-swatch" style="--series-color:${escapeHtml(item.color)}"></span>
+      ${escapeHtml(item.label)}
+    </span>
+  `).join("");
+}
+
+function renderDashboardFocusMetrics(metrics) {
+  const container = modernDashboardDom.dashboardFocusMetrics;
+
+  if (!container) {
+    return;
+  }
+
+  const items = Array.isArray(metrics) ? metrics : [];
+
+  if (!items.length) {
+    container.replaceChildren(createEmptyMessage("Os indicadores aparecem aqui.", "detail-empty"));
+    return;
+  }
+
+  container.innerHTML = items.map((item) => `
+    <article class="dashboard-focus-metric">
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+    </article>
+  `).join("");
+}
+
+function renderMultiSeriesChart(container, config, emptyMessage) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  const labels = Array.isArray(config?.labels) ? config.labels : [];
+  const series = (Array.isArray(config?.series) ? config.series : []).filter((item) => {
+    return Array.isArray(item?.points) && item.points.length === labels.length;
+  });
+  const hasData = series.some((item) => item.points.some((point) => Number(point?.value) > 0));
+
+  if (!labels.length || !series.length || !hasData) {
+    container.appendChild(createEmptyMessage(emptyMessage));
+    return;
+  }
+
+  const width = 100;
+  const height = 100;
+  const usableHeight = 72;
+  const startY = 14;
+  const stepX = labels.length > 1 ? width / (labels.length - 1) : 0;
+  const xPositions = labels.map((_, index) => (labels.length === 1 ? width / 2 : stepX * index));
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "multi-line-chart";
+
+  const svg = createSvgElement("svg");
+  svg.classList.add("multi-line-chart-svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  [0, 0.5, 1].forEach((ratio) => {
+    const grid = createSvgElement("line");
+    const y = startY + (usableHeight * ratio);
+    grid.setAttribute("x1", "0");
+    grid.setAttribute("x2", String(width));
+    grid.setAttribute("y1", y.toFixed(2));
+    grid.setAttribute("y2", y.toFixed(2));
+    grid.setAttribute("class", "multi-line-grid");
+    svg.appendChild(grid);
+  });
+
+  const activeGuide = createSvgElement("line");
+  activeGuide.setAttribute("class", "multi-line-active-guide");
+  activeGuide.setAttribute("y1", String(startY));
+  activeGuide.setAttribute("y2", String(startY + usableHeight));
+  svg.appendChild(activeGuide);
+
+  const normalizedSeries = series.map((item) => {
+    const maxValue = Math.max(...item.points.map((point) => Number(point?.value) || 0), 1);
+    const coordinates = item.points.map((point, index) => {
+      const value = Number(point?.value) || 0;
+      return {
+        x: xPositions[index],
+        y: startY + (usableHeight - ((value / maxValue) * usableHeight)),
+        point,
+      };
+    });
+
+    return { ...item, coordinates };
+  });
+
+  normalizedSeries.forEach((item) => {
+    const path = createSvgElement("path");
+    const linePath = item.coordinates
+      .map((coordinate, index) => `${index === 0 ? "M" : "L"} ${coordinate.x.toFixed(2)} ${coordinate.y.toFixed(2)}`)
+      .join(" ");
+    path.setAttribute("d", linePath);
+    path.setAttribute("class", "multi-line-path");
+    path.style.setProperty("--series-color", item.color);
+    svg.appendChild(path);
+
+    item.coordinates.forEach((coordinate) => {
+      const point = createSvgElement("circle");
+      point.setAttribute("cx", coordinate.x.toFixed(2));
+      point.setAttribute("cy", coordinate.y.toFixed(2));
+      point.setAttribute("r", "2.6");
+      point.setAttribute("class", "multi-line-point");
+      point.style.setProperty("--series-color", item.color);
+      svg.appendChild(point);
+    });
+  });
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "dashboard-focus-tooltip";
+
+  const updateTooltip = (index, clientX, clientY) => {
+    const bounds = wrapper.getBoundingClientRect();
+    const label = labels[index] || "";
+    const rowsMarkup = normalizedSeries.map((item) => {
+      const point = item.points[index] || { value: 0 };
+      const formatter = typeof item.formatValue === "function"
+        ? item.formatValue
+        : (payload) => String(payload?.value || 0);
+
+      return `
+        <div class="dashboard-focus-tooltip-row">
+          <span class="dashboard-focus-tooltip-swatch" style="--series-color:${escapeHtml(item.color)}"></span>
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(formatter(point))}</strong>
+        </div>
+      `;
+    }).join("");
+
+    tooltip.innerHTML = `<strong>${escapeHtml(label)}</strong>${rowsMarkup}`;
+    tooltip.classList.add("is-visible");
+
+    const left = Math.max(34, Math.min(clientX - bounds.left, bounds.width - 34));
+    const top = Math.max(38, Math.min(clientY - bounds.top, bounds.height - 12));
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+
+    const x = xPositions[index];
+    activeGuide.setAttribute("x1", x.toFixed(2));
+    activeGuide.setAttribute("x2", x.toFixed(2));
+    activeGuide.style.opacity = "1";
+  };
+
+  const hideTooltip = () => {
+    tooltip.classList.remove("is-visible");
+    activeGuide.style.opacity = "0";
+  };
+
+  labels.forEach((_, index) => {
+    const hitbox = createSvgElement("rect");
+    const previousX = xPositions[index - 1] ?? xPositions[index];
+    const nextX = xPositions[index + 1] ?? xPositions[index];
+    const xStart = index === 0 ? 0 : (previousX + xPositions[index]) / 2;
+    const xEnd = index === labels.length - 1 ? width : (xPositions[index] + nextX) / 2;
+
+    hitbox.setAttribute("x", xStart.toFixed(2));
+    hitbox.setAttribute("y", "0");
+    hitbox.setAttribute("width", Math.max(2, xEnd - xStart).toFixed(2));
+    hitbox.setAttribute("height", String(height));
+    hitbox.setAttribute("class", "multi-line-hitbox");
+    hitbox.addEventListener("mouseenter", (event) => updateTooltip(index, event.clientX, event.clientY));
+    hitbox.addEventListener("mousemove", (event) => updateTooltip(index, event.clientX, event.clientY));
+    hitbox.addEventListener("mouseleave", hideTooltip);
+    svg.appendChild(hitbox);
+  });
+
+  wrapper.addEventListener("mouseleave", hideTooltip);
+
+  const labelRow = document.createElement("div");
+  labelRow.className = "multi-line-chart-labels";
+  labelRow.style.setProperty("--chart-count", String(labels.length));
+
+  labels.forEach((label) => {
+    const item = document.createElement("span");
+    item.textContent = label;
+    labelRow.appendChild(item);
+  });
+
+  wrapper.appendChild(svg);
+  wrapper.appendChild(labelRow);
+  wrapper.appendChild(tooltip);
+  container.appendChild(wrapper);
+}
+
+function renderDashboardFocus(rangeSessions, rangeEssays, rangeQuestions) {
+  try {
+    const config = buildDashboardFocusConfig(rangeSessions, rangeEssays, rangeQuestions);
+
+    updateDashboardFocusViewUI();
+    setTextContent(modernDashboardDom.dashboardFocusTitle, config.title);
+    setTextContent(modernDashboardDom.dashboardFocusNote, config.note);
+    renderDashboardFocusLegend(config.series);
+    renderDashboardFocusMetrics(config.metrics);
+    renderMultiSeriesChart(
+      modernDashboardDom.dashboardFocusChart,
+      config,
+      config.emptyMessage || "Sem dados suficientes para montar o grafico."
+    );
+  } catch (error) {
+    console.error("Erro ao renderizar o grafico principal do painel:", error);
+    setTextContent(modernDashboardDom.dashboardFocusTitle, "Panorama");
+    setTextContent(
+      modernDashboardDom.dashboardFocusNote,
+      "Nao foi possivel montar o grafico agora. Tente atualizar a pagina."
+    );
+    renderDashboardFocusLegend([]);
+    renderDashboardFocusMetrics([]);
+    modernDashboardDom.dashboardFocusChart?.replaceChildren(
+      createEmptyMessage("Nao foi possivel carregar o grafico principal.")
+    );
+  }
+}
+
+function renderModernDashboard(rangeSessions, rangeEssays, rangeQuestions) {
+  renderDashboardFocus(rangeSessions, rangeEssays, rangeQuestions);
+}
+
 function renderDashboard() {
   const rangeSessions = getSessionsForRange();
   const rangeEssays = getEssaySubmissionsForRange();
   const rangeQuestions = getQuestionAttemptsForRange();
 
   updateAnalyticsRangeUI();
-  renderDashboardHero(rangeSessions, rangeEssays, rangeQuestions);
-  renderOverviewAnalytics(rangeSessions, rangeEssays, rangeQuestions);
-  renderRoutineAnalytics(rangeSessions);
-  renderQuestionAnalytics(rangeQuestions);
-  renderEssayAnalytics(rangeEssays);
-  renderEnglishAnalytics(rangeSessions);
-  renderRecommendations(rangeSessions, rangeEssays, rangeQuestions);
-  renderHistoryAnalytics(rangeEssays);
+  renderModernDashboard(rangeSessions, rangeEssays, rangeQuestions);
   window.Start5Auth?.setHeaderMonthlyMinutes?.(sumMinutes(getCurrentMonthSessions()));
 }
 
@@ -4476,6 +5281,19 @@ function bindEvents() {
     });
   });
 
+  dashboardFocusViewButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextView = String(button.dataset.dashboardFocusView || "panorama");
+
+      if (nextView === dashboardFocusView) {
+        return;
+      }
+
+      dashboardFocusView = nextView;
+      renderDashboard();
+    });
+  });
+
   subjectSelect?.addEventListener("change", () => {
     setSelectedSubject(subjectSelect.value || DEFAULT_SUBJECT_KEY);
   });
@@ -4611,7 +5429,7 @@ async function initializeApp() {
     return;
   }
 
-  loadQuestionAttemptsFromStorage();
+  await loadQuestionAttemptsFromApi();
   await importLegacySessionsIfNeeded();
   await loadSessionsFromApi();
   await loadEssaySubmissionsFromApi();

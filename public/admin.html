@@ -89,19 +89,64 @@
     </aside>
 
     <main id="mainContent">
-    <section class="dashboard-intro">
-      <div class="dashboard-intro-inner">
+    <section class="dashboard-intro admin-hero">
+      <div class="dashboard-intro-inner admin-hero-inner">
         <div>
-          <p class="section-label">Admin</p>
-          <h1 class="progress-title">Visao geral do site</h1>
+          <p class="section-label">Start 5 Admin</p>
+          <h1 class="progress-title">Painel de controle</h1>
           <p class="dashboard-copy">
-            Acompanhe crescimento, contas, praticas e o uso da nova area de redacao sem expor textos individuais.
+            Organize operacao, contas, provas e configuracoes em areas separadas para manter o ADM limpo e escalavel.
           </p>
+        </div>
+
+        <div class="admin-hero-pills" aria-label="Pontos principais do painel administrativo">
+          <span class="admin-hero-pill">Controle de acesso</span>
+          <span class="admin-hero-pill">Banco de questoes</span>
+          <span class="admin-hero-pill">Emails e contas</span>
+          <span class="admin-hero-pill">Perfil administrativo</span>
         </div>
       </div>
     </section>
 
-    <section class="admin-section admin-section-overview">
+    <nav class="admin-shortcut-grid" aria-label="Atalhos administrativos">
+      <a class="admin-shortcut-card" href="#adminQuestionBankSection">
+        <span class="admin-shortcut-label">Registrar provas</span>
+        <strong class="admin-shortcut-title">PDF, revisao e publicacao</strong>
+        <span class="admin-shortcut-copy">Cadastre provas, processe texto e publique o banco estruturado.</span>
+      </a>
+
+      <a class="admin-shortcut-card" href="#adminPermissionsSection">
+        <span class="admin-shortcut-label">Permissoes</span>
+        <strong class="admin-shortcut-title">Acessos do painel</strong>
+        <span class="admin-shortcut-copy">Gerencie perfis administrativos e controle as acoes por conta.</span>
+      </a>
+
+      <a class="admin-shortcut-card" href="#adminEmailsSection">
+        <span class="admin-shortcut-label">Emails</span>
+        <strong class="admin-shortcut-title">Contas e contatos</strong>
+        <span class="admin-shortcut-copy">Veja a base de contas vinculadas e acompanhe os acessos mais recentes.</span>
+      </a>
+
+      <a class="admin-shortcut-card" href="#adminProfileSection">
+        <span class="admin-shortcut-label">Perfil</span>
+        <strong class="admin-shortcut-title">Configuracao do admin</strong>
+        <span class="admin-shortcut-copy">Acesse rapidamente seus dados e atalhos do perfil administrativo.</span>
+      </a>
+    </nav>
+
+    <section class="admin-section admin-section-overview admin-overview-shell" id="adminOverviewSection">
+      <article class="admin-panel admin-section-intro">
+        <div class="admin-section-head">
+          <div>
+            <p class="section-label">Admin</p>
+            <h2 class="analysis-title">Visao geral do site</h2>
+            <p class="module-copy">
+              Acompanhe crescimento, contas, praticas e o uso da nova area de redacao sem expor textos individuais.
+            </p>
+          </div>
+        </div>
+      </article>
+
       <div class="admin-grid" id="adminOverviewGrid">
         <article class="summary-card">
           <span class="summary-label">Usuarios</span>
@@ -128,9 +173,7 @@
           <strong class="summary-value" id="adminActiveUsersValue">0</strong>
         </article>
       </div>
-    </section>
 
-    <section class="admin-section">
       <div class="admin-grid admin-essay-grid">
         <article class="summary-card">
           <span class="summary-label">Redacoes</span>
@@ -157,9 +200,7 @@
           <strong class="summary-value" id="adminEssayUsersValue">0</strong>
         </article>
       </div>
-    </section>
 
-    <section class="admin-section">
       <div class="admin-grid admin-essay-detail-grid">
         <article class="admin-panel">
           <div class="day-history-head">
@@ -191,11 +232,14 @@
       </div>
     </section>
 
-    <section class="admin-section">
+    <section class="admin-section" id="adminPermissionsSection">
       <div class="admin-panel">
-        <div class="day-history-head">
-          <h3>Usuarios do site</h3>
-          <p class="day-history-date">Visao agregada para manter privacidade.</p>
+        <div class="admin-section-head">
+          <div>
+            <p class="section-label">Permissoes</p>
+            <h2 class="analysis-title">Acessos administrativos</h2>
+            <p class="module-copy">Controle perfis, revise contas e edite acessos sem misturar com as outras areas do painel.</p>
+          </div>
         </div>
 
         <div class="admin-table-wrap">
@@ -222,7 +266,84 @@
       </div>
     </section>
 
-    <section class="admin-section question-bank-admin-section" aria-labelledby="questionBankAdminTitle">
+    <section class="admin-section admin-meta-layout">
+      <article class="admin-panel" id="adminEmailsSection">
+        <div class="admin-section-head">
+          <div>
+            <p class="section-label">Emails</p>
+            <h2 class="analysis-title">Contas vinculadas</h2>
+            <p class="module-copy">Acompanhe a base de emails conectados ao sistema e os acessos mais recentes.</p>
+          </div>
+        </div>
+
+        <div class="admin-grid admin-email-grid">
+          <article class="summary-card">
+            <span class="summary-label">Contas</span>
+            <strong class="summary-value" id="adminEmailAccountsValue">0</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Admins</span>
+            <strong class="summary-value" id="adminEmailAdminsValue">0</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Ativas</span>
+            <strong class="summary-value" id="adminEmailActiveValue">0</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Ultimo acesso</span>
+            <strong class="summary-value admin-summary-small" id="adminEmailRecentValue">Sem registro</strong>
+          </article>
+        </div>
+
+        <div class="admin-metric-list" id="adminEmailList">
+          <div class="admin-metric-row">
+            <span class="admin-metric-key">Nenhuma conta carregada ainda.</span>
+            <strong class="admin-metric-value">0</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="admin-panel" id="adminProfileSection">
+        <div class="admin-section-head">
+          <div>
+            <p class="section-label">Perfil</p>
+            <h2 class="analysis-title">Seu perfil administrativo</h2>
+            <p class="module-copy">Consulte seus dados atuais e use atalhos rapidos para continuar a operacao.</p>
+          </div>
+        </div>
+
+        <div class="admin-profile-card">
+          <div class="admin-profile-avatar" id="adminProfileAvatar">A</div>
+
+          <div class="admin-profile-copy">
+            <strong class="admin-profile-name" id="adminProfileNameValue">Administrador</strong>
+            <span class="admin-profile-email" id="adminProfileEmailValue">Sem email</span>
+          </div>
+        </div>
+
+        <div class="admin-grid admin-profile-grid">
+          <article class="summary-card">
+            <span class="summary-label">Perfil</span>
+            <strong class="summary-value" id="adminProfileRoleValue">Admin</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Foco</span>
+            <strong class="summary-value" id="adminProfileFocusValue">Sem foco</strong>
+          </article>
+        </div>
+
+        <div class="admin-quick-actions">
+          <a href="profile.html" class="admin-quick-action">Abrir perfil</a>
+          <a href="dashboard.html" class="admin-quick-action">Ir para o painel</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="admin-section question-bank-admin-section" id="adminQuestionBankSection" aria-labelledby="questionBankAdminTitle">
       <div class="admin-panel question-bank-admin-hero">
         <div class="question-bank-admin-head">
           <div>

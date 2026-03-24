@@ -89,174 +89,205 @@
     </aside>
 
     <main id="mainContent" class="question-bank-page">
-      <section class="dashboard-intro question-bank-hero">
-        <div class="dashboard-intro-inner question-bank-hero-inner">
-          <div class="question-bank-hero-copy">
-            <p class="section-label">Banco de questoes</p>
-            <h1 class="progress-title">Resolva vestibulares dentro do Start 5</h1>
-            <p class="dashboard-copy">
-              O PDF fica no ADM. Aqui, o foco e estudar por filtros, acompanhar acertos e revisar o que ainda esta fraco.
-            </p>
-          </div>
+      <section class="question-bank-header" aria-labelledby="questionBankPageTitle">
+        <div class="question-bank-header-copy">
+          <p class="section-label">Questoes</p>
+          <h1 class="progress-title" id="questionBankPageTitle">Questoes</h1>
+        </div>
 
-          <div class="question-bank-hero-pills" id="questionBankHeroPills">
-            <span class="analytics-pill">Base conectada</span>
-            <span class="analytics-pill analytics-pill-muted">Filtro por vestibular, ano, materia e dificuldade</span>
-          </div>
+        <div class="question-bank-hero-pills" id="questionBankHeroPills">
+          <span class="analytics-pill">Base conectada</span>
+          <span class="analytics-pill analytics-pill-muted">Filtros e sessao</span>
         </div>
       </section>
 
-      <section class="question-bank-summary" aria-labelledby="questionBankSummaryTitle">
-        <div class="question-bank-panel-head">
-          <div>
-            <p class="section-label">Visao rapida</p>
-            <h2 class="analysis-title" id="questionBankSummaryTitle">Seu ritmo no banco</h2>
-          </div>
-        </div>
-
-        <div class="question-bank-summary-grid">
-          <article class="summary-card">
-            <span class="summary-label">Disponiveis</span>
-            <strong class="summary-value" id="questionBankAvailableValue">0</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Respondidas</span>
-            <strong class="summary-value" id="questionBankAnsweredValue">0</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Acertos</span>
-            <strong class="summary-value" id="questionBankCorrectValue">0</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Erros</span>
-            <strong class="summary-value" id="questionBankWrongValue">0</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Taxa de acerto</span>
-            <strong class="summary-value" id="questionBankAccuracyValue">0%</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Para revisar</span>
-            <strong class="summary-value" id="questionBankReviewValue">0</strong>
-          </article>
-        </div>
-      </section>
-
-      <section class="dashboard-module question-bank-filter-module" aria-labelledby="questionBankFiltersTitle">
-        <div class="question-bank-panel-head">
-          <div>
-            <p class="section-label">Filtros</p>
-            <h2 class="analysis-title" id="questionBankFiltersTitle">Monte sua sessao</h2>
-            <p class="module-copy">
-              Escolha como quer estudar hoje e busque o proximo bloco de questoes sem depender do PDF original.
-            </p>
-          </div>
-        </div>
-
-        <form class="question-bank-filter-form" id="questionBankFilterForm">
-          <div class="question-bank-filter-grid">
-            <label class="question-bank-field">
-              <span class="question-bank-label">Vestibular</span>
-              <select id="questionBankVestibularFilter" name="vestibular" class="admin-modal-input">
-                <option value="">Todos</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Ano</span>
-              <select id="questionBankYearFilter" name="ano" class="admin-modal-input">
-                <option value="">Todos</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Materia</span>
-              <select id="questionBankMatterFilter" name="materia" class="admin-modal-input">
-                <option value="">Todas</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Dificuldade</span>
-              <select id="questionBankDifficultyFilter" name="dificuldade" class="admin-modal-input">
-                <option value="">Todas</option>
-                <option value="facil">Facil</option>
-                <option value="media">Media</option>
-                <option value="dificil">Dificil</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Dia</span>
-              <select id="questionBankDayFilter" name="dia" class="admin-modal-input">
-                <option value="">Todos</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Caderno</span>
-              <select id="questionBankBookletFilter" name="caderno" class="admin-modal-input">
-                <option value="">Todos</option>
-              </select>
-            </label>
-
-            <label class="question-bank-field">
-              <span class="question-bank-label">Recorte</span>
-              <select id="questionBankStatusFilter" name="status" class="admin-modal-input">
-                <option value="all">Todas</option>
-                <option value="unanswered">Nao resolvidas</option>
-                <option value="wrong">Erradas</option>
-                <option value="favorites">Favoritas</option>
-                <option value="review">Revisar depois</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="question-bank-filter-actions">
-            <button type="submit" class="modal-button modal-button-primary" id="questionBankSearchButton">
-              Buscar questoes
-            </button>
-            <button type="button" class="modal-button modal-button-secondary" id="questionBankResetButton">
-              Limpar filtros
-            </button>
-          </div>
-        </form>
-
-        <p class="question-bank-page-feedback" id="questionBankPageFeedback" aria-live="polite"></p>
-      </section>
-
-      <section class="question-bank-layout" aria-labelledby="questionBankResultsTitle">
-        <article class="dashboard-module question-bank-results-panel">
+      <section class="question-bank-top-grid">
+        <article class="dashboard-module question-bank-summary" aria-labelledby="questionBankSummaryTitle">
           <div class="question-bank-panel-head">
             <div>
-              <p class="section-label">Resultados</p>
-              <h2 class="analysis-title" id="questionBankResultsTitle">Lista para resolver</h2>
+              <p class="section-label">Visao rapida</p>
+              <h2 class="analysis-title" id="questionBankSummaryTitle">Resumo</h2>
             </div>
-
-            <p class="question-bank-results-meta" id="questionBankResultsMeta">Carregando questoes...</p>
           </div>
 
-          <div class="question-bank-results-list" id="questionBankResultsList">
-            <div class="question-bank-empty">Carregando questoes publicadas...</div>
+          <div class="question-bank-summary-grid">
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankAvailableLabel">Disponiveis</span>
+              <strong class="summary-value" id="questionBankAvailableValue">0</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankAnsweredLabel">Respondidas</span>
+              <strong class="summary-value" id="questionBankAnsweredValue">0</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankCorrectLabel">Acertos</span>
+              <strong class="summary-value" id="questionBankCorrectValue">0</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankWrongLabel">Erros</span>
+              <strong class="summary-value" id="questionBankWrongValue">0</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankAccuracyLabel">Taxa de acerto</span>
+              <strong class="summary-value" id="questionBankAccuracyValue">0%</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label" id="questionBankReviewLabel">Para revisar</span>
+              <strong class="summary-value" id="questionBankReviewValue">0</strong>
+            </article>
           </div>
         </article>
 
-        <article class="dashboard-module question-bank-workspace-panel">
+        <article class="dashboard-module question-bank-filter-module" aria-labelledby="questionBankFiltersTitle">
           <div class="question-bank-panel-head">
             <div>
-              <p class="section-label">Resolucao</p>
-              <h2 class="analysis-title">Area da questao</h2>
+              <p class="section-label">Filtros</p>
+              <h2 class="analysis-title" id="questionBankFiltersTitle">Filtros da sessao</h2>
             </div>
           </div>
 
+          <form class="question-bank-filter-form" id="questionBankFilterForm">
+            <div class="question-bank-filter-grid">
+              <label class="question-bank-field">
+                <span class="question-bank-label">Vestibular</span>
+                <select id="questionBankVestibularFilter" name="vestibular" class="admin-modal-input">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Ano</span>
+                <select id="questionBankYearFilter" name="ano" class="admin-modal-input">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Materia</span>
+                <select id="questionBankMatterFilter" name="materia" class="admin-modal-input">
+                  <option value="">Todas</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Dificuldade</span>
+                <select id="questionBankDifficultyFilter" name="dificuldade" class="admin-modal-input">
+                  <option value="">Todas</option>
+                  <option value="facil">Facil</option>
+                  <option value="media">Media</option>
+                  <option value="dificil">Dificil</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Dia</span>
+                <select id="questionBankDayFilter" name="dia" class="admin-modal-input">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Caderno</span>
+                <select id="questionBankBookletFilter" name="caderno" class="admin-modal-input">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+
+              <label class="question-bank-field">
+                <span class="question-bank-label">Recorte</span>
+                <select id="questionBankStatusFilter" name="status" class="admin-modal-input">
+                  <option value="all">Todas</option>
+                  <option value="unanswered">Nao resolvidas</option>
+                  <option value="wrong">Erradas</option>
+                  <option value="favorites">Favoritas</option>
+                  <option value="review">Revisar depois</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="question-bank-filter-actions">
+              <button type="submit" class="modal-button modal-button-primary" id="questionBankSearchButton">
+                Buscar questoes
+              </button>
+              <button type="button" class="modal-button modal-button-secondary" id="questionBankResetButton">
+                Limpar filtros
+              </button>
+            </div>
+          </form>
+
+          <p class="question-bank-page-feedback" id="questionBankPageFeedback" aria-live="polite"></p>
+        </article>
+      </section>
+
+      <section class="question-bank-study-stack" id="questionBankStudyStack">
+        <article class="dashboard-module question-bank-proof-panel" aria-labelledby="questionBankProofTitle">
+          <div class="question-bank-panel-head">
+            <div>
+              <p class="section-label">Prova aberta</p>
+              <h2 class="analysis-title" id="questionBankProofTitle">Abra uma prova</h2>
+            </div>
+
+            <p class="question-bank-proof-caption" id="questionBankProofCaption">
+              PDF com rolagem interna.
+            </p>
+          </div>
+
+          <div class="question-bank-proof-actions" id="questionBankProofActions"></div>
+
+          <div class="question-bank-proof-shell">
+            <div class="question-bank-proof-frame" id="questionBankProofFrame">
+              <div class="question-bank-empty">Escolha uma sessao para abrir o PDF.</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-module question-bank-resolution-panel" aria-labelledby="questionBankResolutionTitle">
+          <div class="question-bank-panel-head">
+            <div>
+              <p class="section-label">Resolucao</p>
+              <h2 class="analysis-title" id="questionBankResolutionTitle">Responder</h2>
+            </div>
+          </div>
+
+          <form class="question-bank-jump-form" id="questionBankJumpForm">
+            <div class="question-bank-jump-grid">
+              <label class="question-bank-field question-bank-field-number" for="questionBankQuestionNumberInput">
+                <span class="question-bank-label">Numero da questao</span>
+                <input
+                  id="questionBankQuestionNumberInput"
+                  class="admin-modal-input question-bank-number-input"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  step="1"
+                  placeholder="Ex.: 12"
+                />
+              </label>
+
+              <div class="question-bank-jump-actions">
+                <button type="button" class="modal-button modal-button-secondary" id="questionBankPrevButton">
+                  Anterior
+                </button>
+                <button type="submit" class="modal-button modal-button-primary" id="questionBankJumpButton">
+                  Abrir questao
+                </button>
+                <button type="button" class="modal-button modal-button-secondary" id="questionBankNextButton">
+                  Proxima
+                </button>
+              </div>
+            </div>
+
+            <p class="question-bank-question-meta" id="questionBankQuestionMeta">Abra uma prova para comecar.</p>
+          </form>
+
           <div class="question-bank-workspace" id="questionBankWorkspace">
             <div class="question-bank-empty">
-              Escolha uma questao na lista para abrir o enunciado, responder e acompanhar a correcao.
+              Escolha uma sessao para resolver aqui.
             </div>
           </div>
         </article>

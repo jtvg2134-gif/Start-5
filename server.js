@@ -15,7 +15,7 @@ import {
   calculateUsageDifficulty,
   parseQuestionsFromExtractedText,
 } from "./backend/question_bank.js";
-import { loadEnemCatalog } from "./backend/enem_catalog.js";
+import { findEnemCatalogItem, loadEnemCatalog } from "./backend/enem_catalog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -3379,6 +3379,34 @@ const questionBankStudentOverviewStatement = db.prepare(`
     AND questoes.status_revisao = 'approved'
 `);
 
+const listQuestionAttemptsForAnalyticsStatement = db.prepare(`
+  SELECT
+    question_attempts.id,
+    question_attempts.questao_id AS questaoId,
+    question_attempts.resposta_marcada AS respostaMarcada,
+    question_attempts.acertou AS acertou,
+    question_attempts.tempo_gasto_segundos AS tempoGastoSegundos,
+    question_attempts.created_at AS createdAt,
+    questoes.numero,
+    questoes.materia,
+    questoes.tema,
+    provas.id AS proofId,
+    provas.ano,
+    provas.fase,
+    provas.versao,
+    vestibulares.nome AS vestibularNome,
+    vestibulares.sigla AS vestibularSigla
+  FROM question_attempts
+  INNER JOIN questoes ON questoes.id = question_attempts.questao_id
+  INNER JOIN provas ON provas.id = questoes.prova_id
+  INNER JOIN vestibulares ON vestibulares.id = provas.vestibular_id
+  WHERE question_attempts.user_id = ?
+    AND provas.status = 'published'
+    AND questoes.status_revisao = 'approved'
+  ORDER BY question_attempts.created_at DESC, question_attempts.id DESC
+  LIMIT ?
+`);
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -4369,6 +4397,34 @@ function getQuestionBankUploadFilePath(storedFileName) {
   return filePath;
 }
 
+function getProjectRelativeFilePath(relativeFilePath, baseDir = projectRoot) {
+  const normalizedPath = String(relativeFilePath || "").trim();
+
+  if (!normalizedPath) {
+    return "";
+  }
+
+  const filePath = resolve(baseDir, normalizedPath);
+  const fileRelativePath = relative(baseDir, filePath);
+
+  if (!fileRelativePath || fileRelativePath.startsWith("..")) {
+    return "";
+  }
+
+  return filePath;
+}
+
+async function sendInlinePdfFile(response, filePath, downloadName) {
+  const file = await readFile(filePath);
+
+  response.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `inline; filename="${downloadName}"`,
+    "Cache-Control": "no-store",
+  });
+  response.end(file);
+}
+
 function tryExtractTextFromPdfFile(storedFileName) {
   const filePath = getQuestionBankUploadFilePath(storedFileName);
 
@@ -4572,6 +4628,8 @@ function serializeStudentQuestionRow(row, alternatives = [], options = {}) {
       ano: Number(row.ano) || 0,
       fase: String(row.fase || ""),
       versao: String(row.versao || ""),
+      pdfOriginalName: String(row.pdfOriginalName || ""),
+      pdfViewerUrl: row.pdfFilePath ? `/api/question-bank/provas/${Number(row.proofId || row.provaId) || 0}/file` : "",
     },
     materia: String(row.materia || ""),
     tema: String(row.tema || ""),
@@ -4917,6 +4975,26 @@ function sanitizeQuestionBankBooklet(value = "") {
   return /^CD\d{1,2}$/.test(normalized) ? normalized : "";
 }
 
+function buildQuestionBankCatalogFileUrl(item = {}, kind = "prova") {
+  const safeKind = kind === "gabarito" ? "gabarito" : "prova";
+  const ano = Number(item.ano) || 0;
+  const dia = Number(item.dia) || 0;
+  const caderno = sanitizeQuestionBankBooklet(item.caderno || "");
+
+  if (!ano || !dia || !caderno) {
+    return "";
+  }
+
+  const searchParams = new URLSearchParams({
+    ano: String(ano),
+    dia: String(dia),
+    caderno,
+    kind: safeKind,
+  });
+
+  return `/api/question-bank/catalog/file?${searchParams.toString()}`;
+}
+
 function resolveQuestionBankCatalogVestibular(rawVestibular = "") {
   const directExamId = Number(rawVestibular);
 
@@ -4971,6 +5049,7 @@ function serializeQuestionBankCatalogSession(item = {}) {
       ? {
           principal: String(item.prova.principal || ""),
           nomeOriginal: String(item.prova.nome_original || ""),
+          viewerUrl: item.prova.principal ? buildQuestionBankCatalogFileUrl(item, "prova") : "",
           variantCount: Array.isArray(item.prova.variantes) ? item.prova.variantes.length : 0,
           duplicateCount: Array.isArray(item.prova.duplicatas) ? item.prova.duplicatas.length : 0,
         }
@@ -4979,6 +5058,7 @@ function serializeQuestionBankCatalogSession(item = {}) {
       ? {
           principal: String(item.gabarito.principal || ""),
           nomeOriginal: String(item.gabarito.nome_original || ""),
+          viewerUrl: item.gabarito.principal ? buildQuestionBankCatalogFileUrl(item, "gabarito") : "",
           variantCount: Array.isArray(item.gabarito.variantes) ? item.gabarito.variantes.length : 0,
           duplicateCount: Array.isArray(item.gabarito.duplicatas) ? item.gabarito.duplicatas.length : 0,
         }
@@ -5082,7 +5162,7 @@ async function buildQuestionBankCatalogFallback(filters = {}) {
         resolved: {},
       },
       source: {},
-      error: error?.message || "Nao foi possivel carregar o catalogo ENEM.",
+      error: sanitizePublicErrorMessage(error, "Nao foi possivel carregar o catalogo ENEM."),
     };
   }
 }
@@ -5108,18 +5188,45 @@ function buildQuestionBankStudentOverview(userId) {
   };
 }
 
+function listQuestionAttemptsForAnalytics(userId, limit = 1000) {
+  const normalizedLimit = clampInteger(limit, 1, 2000);
+  const rows = listQuestionAttemptsForAnalyticsStatement.all(userId, normalizedLimit);
+
+  return rows.map((row) => ({
+    id: Number(row.id) || 0,
+    questionId: Number(row.questaoId) || 0,
+    proofId: Number(row.proofId) || 0,
+    questionNumber: Number(row.numero) || 0,
+    examName: String(row.vestibularSigla || row.vestibularNome || "Vestibular nao informado"),
+    subjectName: String(row.materia || "Materia nao informada"),
+    topicName: String(row.tema || ""),
+    year: Number(row.ano) || 0,
+    isCorrect: Boolean(row.acertou),
+    answer: sanitizeQuestionAlternativeLetter(row.respostaMarcada, true),
+    timeSpentSeconds: Number(row.tempoGastoSegundos) || 0,
+    createdAt: String(row.createdAt || ""),
+    proofLabel: [row.vestibularSigla || row.vestibularNome || "", row.ano || ""].filter(Boolean).join(" ").trim(),
+  }));
+}
+
 function listPublishedQuestionBankQuestions(userId, filters = {}) {
   const conditions = [
     "provas.status = 'published'",
     "questoes.status_revisao = 'approved'",
   ];
   const params = [userId, userId];
+  const proofId = Number(filters.proofId || filters.provaId || 0);
   const vestibularId = Number(filters.vestibularId || 0);
   const ano = Number(filters.ano || 0);
   const materia = normalizeQuestionBankTerm(filters.materia || "", 80);
   const dificuldade = sanitizeQuestionDifficulty(filters.dificuldade || "", "");
   const statusFilter = sanitizeQuestionFlagFilter(filters.status || "all");
   const limit = clampInteger(filters.limit || 60, 1, 120);
+
+  if (Number.isInteger(proofId) && proofId > 0) {
+    conditions.push("provas.id = ?");
+    params.push(proofId);
+  }
 
   if (Number.isInteger(vestibularId) && vestibularId > 0) {
     conditions.push("provas.vestibular_id = ?");
@@ -5167,6 +5274,8 @@ function listPublishedQuestionBankQuestions(userId, filters = {}) {
       provas.ano,
       provas.fase,
       provas.versao,
+      provas.pdf_file_path AS pdfFilePath,
+      provas.pdf_original_name AS pdfOriginalName,
       vestibulares.id AS vestibularId,
       vestibulares.nome AS vestibularNome,
       vestibulares.sigla AS vestibularSigla,
@@ -5229,6 +5338,8 @@ function getPublishedQuestionForUser(userId, questionId, options = {}) {
       provas.ano,
       provas.fase,
       provas.versao,
+      provas.pdf_file_path AS pdfFilePath,
+      provas.pdf_original_name AS pdfOriginalName,
       vestibulares.id AS vestibularId,
       vestibulares.nome AS vestibularNome,
       vestibulares.sigla AS vestibularSigla,
@@ -6312,6 +6423,99 @@ function getRoutinePlanResponse(userId, weekStartKey) {
 
 function sanitizeEssayFeedbackText(value, maxLength = 420) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, maxLength);
+}
+
+function extractErrorMessage(error) {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return [
+    error?.response?.error?.message,
+    error?.error?.message,
+    error?.cause?.message,
+    error?.message,
+  ].find((value) => typeof value === "string" && value.trim()) || "";
+}
+
+function isLikelyPromptLeakMessage(message) {
+  const normalizedMessage = sanitizeEssayFeedbackText(message, 1200);
+
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  return (
+    /you are amp|you are devin|you are kiro|you are cascade|you are qoder|you are notion ai|you are antigravity|you are a claude agent|you are an interactive cli tool|you are a web automation assistant|you are an expert ai programming assistant|you are an ai programming assistant|the assistant is claude|claude code version|github copilot|follow microsoft content policies|when asked for your name, you must respond with|working with a user in the vs code editor|managed by an autonomous process|lastinference|debugparamsused|amp thread url|input_schema|tools available in jsonschema|turn_answer_start|tabs_context|copilot_cache_control|workspacefolder path=|notion-flavored markdown|notion has the following main concepts|<claude_behavior>|<artifact_instructions>|<mandatory_copyright_requirements>|<critical_injection_defense>|<tooluseinstructions>|<applypatchinstructions>|<notebookinstructions>|<outputformatting>|<reminderinstructions>|<environment_info>|<workspace_info>|<userrequest>|<recently_viewed_code_snippets>|<tool calling spec>|<\|code_to_edit\|>|working directory|directory listing/i.test(
+      normalizedMessage
+    ) ||
+    (
+      normalizedMessage.length > 220 &&
+      (
+        /\bsystem prompt\b|\bsystem:\b|\btools:\b|\bthinking:\b|\bcache_control:\b|\bstream:\s*true\b|\bcurrent date is\b/i.test(
+          normalizedMessage
+        ) ||
+        /"name"\s*:\s*"computer"|"name"\s*:\s*"web_search"|"name"\s*:\s*"Task"/i.test(
+          normalizedMessage
+        )
+      )
+    )
+  );
+}
+
+function sanitizePublicErrorMessage(error, fallbackMessage = "Nao foi possivel concluir a requisicao.") {
+  const normalizedMessage = sanitizeEssayFeedbackText(extractErrorMessage(error), 520);
+  const safeFallback =
+    sanitizeEssayFeedbackText(fallbackMessage, 240) || "Nao foi possivel concluir a requisicao.";
+
+  if (!normalizedMessage) {
+    return safeFallback;
+  }
+
+  if (isLikelyPromptLeakMessage(normalizedMessage)) {
+    return safeFallback;
+  }
+
+  return sanitizeEssayFeedbackText(normalizedMessage, 240) || safeFallback;
+}
+
+function normalizeEssayServiceError(error) {
+  if (!error) {
+    return createError(502, "Nao foi possivel corrigir a redacao com IA.");
+  }
+
+  const statusCode =
+    Number.isInteger(error?.statusCode) && error.statusCode >= 400
+      ? error.statusCode
+      : Number.isInteger(error?.status) && error.status >= 400
+        ? error.status
+        : 502;
+
+  const normalizedMessage = sanitizeEssayFeedbackText(extractErrorMessage(error), 520);
+  const leakLikeMessage = isLikelyPromptLeakMessage(normalizedMessage);
+
+  let safeMessage = normalizedMessage;
+
+  if (leakLikeMessage) {
+    safeMessage = "A IA retornou um erro invalido ao corrigir a redacao. Tente novamente em instantes.";
+  } else if (/quota|billing|rate limit|too many requests|429/i.test(normalizedMessage)) {
+    safeMessage = "A IA atingiu o limite do provedor. Tente novamente em instantes.";
+  } else if (
+    /openai_api_key|openai_model|api key|incorrect api key|invalid api key|authentication|unauthorized|forbidden/i.test(
+      normalizedMessage
+    )
+  ) {
+    safeMessage = "A configuracao da IA precisa ser revisada antes de corrigir a redacao.";
+  } else if (/json schema|json valido|conteudo valido|structured output|schema/i.test(normalizedMessage)) {
+    safeMessage = "A IA retornou uma resposta incompatível com a correção da redação.";
+  }
+
+  const safeError = createError(
+    statusCode,
+    sanitizeEssayFeedbackText(safeMessage, 240) || "Nao foi possivel corrigir a redacao com IA."
+  );
+  safeError.originalMessage = normalizedMessage;
+  return safeError;
 }
 
 function sanitizeEssayFeedbackList(value, maxItems = 5, maxLength = 180) {
@@ -9662,15 +9866,17 @@ async function handleCreateEssaySubmission(request, response) {
     const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, evaluation);
     sendJson(response, 201, { submission });
   } catch (error) {
+    const safeEssayError = normalizeEssayServiceError(error);
+
     if (ESSAY_EVALUATION_MODE === "openai") {
       const submission = markEssaySubmissionFailed(
         user.id,
         pendingSubmission.id,
-        error?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA."
+        safeEssayError.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o com IA."
       );
       const statusCode =
-        Number.isInteger(error?.statusCode) && error.statusCode >= 400
-          ? error.statusCode
+        Number.isInteger(safeEssayError?.statusCode) && safeEssayError.statusCode >= 400
+          ? safeEssayError.statusCode
           : 502;
 
       sendJson(response, statusCode, {
@@ -9681,20 +9887,21 @@ async function handleCreateEssaySubmission(request, response) {
     }
 
     try {
-      const fallbackEvaluation = evaluateEssayLocally(pendingSubmission, error);
+      const fallbackEvaluation = evaluateEssayLocally(pendingSubmission, safeEssayError);
       const submission = markEssaySubmissionEvaluated(user.id, pendingSubmission.id, fallbackEvaluation);
       sendJson(response, 201, { submission, fallbackMode: "local" });
     } catch (fallbackError) {
+      const safeFallbackError = normalizeEssayServiceError(fallbackError);
       const submission = markEssaySubmissionFailed(
         user.id,
         pendingSubmission.id,
-        fallbackError?.message || error?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o."
+        safeFallbackError?.message || safeEssayError?.message || "N\u00e3o foi poss\u00edvel corrigir a reda\u00e7\u00e3o."
       );
       const statusCode =
-        Number.isInteger(fallbackError?.statusCode) && fallbackError.statusCode >= 400
-          ? fallbackError.statusCode
-          : Number.isInteger(error?.statusCode) && error.statusCode >= 400
-            ? error.statusCode
+        Number.isInteger(safeFallbackError?.statusCode) && safeFallbackError.statusCode >= 400
+          ? safeFallbackError.statusCode
+          : Number.isInteger(safeEssayError?.statusCode) && safeEssayError.statusCode >= 400
+            ? safeEssayError.statusCode
             : 502;
 
       sendJson(response, statusCode, {
@@ -10177,15 +10384,83 @@ async function handleDownloadQuestionProofFile(request, response, rawProofId) {
     throw createError(404, "Arquivo da prova nao encontrado.");
   }
 
-  const file = await readFile(filePath);
   const downloadName = sanitizeShortText(proofRow.pdfOriginalName || `prova-${proofId}.pdf`, 180) || `prova-${proofId}.pdf`;
+  await sendInlinePdfFile(response, filePath, downloadName);
+}
 
-  response.writeHead(200, {
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `inline; filename="${downloadName}"`,
-    "Cache-Control": "no-store",
-  });
-  response.end(file);
+async function handleDownloadPublishedQuestionProofFile(request, response, rawProofId) {
+  const user = getAuthenticatedUser(request);
+
+  if (!user) {
+    throw createError(401, "Sessao nao encontrada.");
+  }
+
+  const proofId = Number(rawProofId);
+
+  if (!Number.isInteger(proofId) || proofId <= 0) {
+    throw createError(400, "Prova invalida.");
+  }
+
+  const proofRow = getQuestionProofByIdStatement.get(proofId);
+
+  if (!proofRow || String(proofRow.status || "") !== "published" || !proofRow.pdfFilePath) {
+    throw createError(404, "Arquivo da prova nao encontrado.");
+  }
+
+  const filePath = getQuestionBankUploadFilePath(proofRow.pdfFilePath);
+
+  if (!filePath || !existsSync(filePath)) {
+    throw createError(404, "Arquivo da prova nao encontrado.");
+  }
+
+  const downloadName = sanitizeShortText(proofRow.pdfOriginalName || `prova-${proofId}.pdf`, 180) || `prova-${proofId}.pdf`;
+  await sendInlinePdfFile(response, filePath, downloadName);
+}
+
+async function handleDownloadQuestionBankCatalogFile(request, response) {
+  const user = getAuthenticatedUser(request);
+
+  if (!user) {
+    throw createError(401, "Sessao nao encontrada.");
+  }
+
+  const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+  const ano = Number(requestUrl.searchParams.get("ano") || 0);
+  const dia = Number(requestUrl.searchParams.get("dia") || 0);
+  const caderno = sanitizeQuestionBankBooklet(requestUrl.searchParams.get("caderno") || "");
+  const kind = String(requestUrl.searchParams.get("kind") || "prova").trim().toLowerCase() === "gabarito"
+    ? "gabarito"
+    : "prova";
+
+  if (!ano || !dia || !caderno) {
+    throw createError(400, "Sessao do catalogo invalida.");
+  }
+
+  const catalogItem = await findEnemCatalogItem({ ano, dia, caderno }, { repoRoot: projectRoot });
+
+  if (!catalogItem) {
+    throw createError(404, "Sessao do catalogo nao encontrada.");
+  }
+
+  const fileRecord = kind === "gabarito" ? catalogItem.gabarito : catalogItem.prova;
+  const relativeFilePath = String(fileRecord?.principal || "");
+
+  if (!relativeFilePath) {
+    throw createError(404, `Arquivo de ${kind === "gabarito" ? "gabarito" : "prova"} nao encontrado.`);
+  }
+
+  const filePath = getProjectRelativeFilePath(relativeFilePath, projectRoot);
+
+  if (!filePath || !existsSync(filePath)) {
+    throw createError(404, "Arquivo do catalogo nao encontrado.");
+  }
+
+  const downloadName = sanitizeShortText(
+    fileRecord?.nome_original || `${catalogItem.vestibular || "enem"}-${ano}-d${dia}-${caderno}-${kind}.pdf`,
+    180
+  ) || `${catalogItem.vestibular || "enem"}-${ano}-d${dia}-${caderno}-${kind}.pdf`;
+
+  await sendInlinePdfFile(response, filePath, downloadName);
 }
 
 async function handleQuestionBankReference(request, response) {
@@ -10217,6 +10492,7 @@ async function handleListQuestionBankQuestions(request, response) {
 
   const requestUrl = new URL(request.url, `http://${request.headers.host}`);
   const questions = listPublishedQuestionBankQuestions(user.id, {
+    proofId: requestUrl.searchParams.get("prova"),
     vestibularId: requestUrl.searchParams.get("vestibular"),
     ano: requestUrl.searchParams.get("ano"),
     materia: requestUrl.searchParams.get("materia"),
@@ -10240,6 +10516,22 @@ async function handleListQuestionBankQuestions(request, response) {
       ...catalog,
       active: overview.totalAvailable === 0 && catalog.available,
     },
+  });
+}
+
+function handleQuestionBankAnalytics(request, response) {
+  const user = getAuthenticatedUser(request);
+
+  if (!user) {
+    throw createError(401, "Sessao nao encontrada.");
+  }
+
+  const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+  const limit = requestUrl.searchParams.get("limit");
+
+  sendJson(response, 200, {
+    attempts: listQuestionAttemptsForAnalytics(user.id, limit || 1000),
+    overview: buildQuestionBankStudentOverview(user.id),
   });
 }
 
@@ -10730,8 +11022,26 @@ async function handleApiRequest(request, response, pathname) {
     return;
   }
 
+  const questionBankProofFileMatch =
+    request.method === "GET" && pathname.match(/^\/api\/question-bank\/provas\/(\d+)\/file$/);
+
+  if (questionBankProofFileMatch) {
+    await handleDownloadPublishedQuestionProofFile(request, response, questionBankProofFileMatch[1]);
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/question-bank/catalog/file") {
+    await handleDownloadQuestionBankCatalogFile(request, response);
+    return;
+  }
+
   if (request.method === "GET" && pathname === "/api/question-bank/questions") {
     await handleListQuestionBankQuestions(request, response);
+    return;
+  }
+
+  if (request.method === "GET" && pathname === "/api/question-bank/analytics") {
+    handleQuestionBankAnalytics(request, response);
     return;
   }
 
@@ -10827,7 +11137,10 @@ const server = createServer(async (request, response) => {
     await serveStaticFile(response, requestUrl.pathname);
   } catch (error) {
     const statusCode = error.statusCode || 500;
-    const message = statusCode >= 500 ? "Erro interno do servidor." : error.message;
+    const message =
+      statusCode >= 500
+        ? "Erro interno do servidor."
+        : sanitizePublicErrorMessage(error, "Nao foi possivel concluir a requisicao.");
     const payload = { error: message };
 
     if (Number.isInteger(error.retryAfter)) {

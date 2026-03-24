@@ -214,9 +214,55 @@ function bindLogoutButtons() {
   });
 }
 
+function isLikelyPromptLeakMessage(message) {
+  const normalizedMessage = String(message || "").trim().replace(/\s+/g, " ").slice(0, 1200);
+
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  return (
+    /you are amp|you are devin|you are kiro|you are cascade|you are qoder|you are notion ai|you are antigravity|you are a claude agent|you are an interactive cli tool|you are a web automation assistant|you are an expert ai programming assistant|you are an ai programming assistant|the assistant is claude|claude code version|github copilot|follow microsoft content policies|when asked for your name, you must respond with|working with a user in the vs code editor|managed by an autonomous process|lastinference|debugparamsused|amp thread url|input_schema|tools available in jsonschema|turn_answer_start|tabs_context|copilot_cache_control|workspacefolder path=|notion-flavored markdown|notion has the following main concepts|<claude_behavior>|<artifact_instructions>|<mandatory_copyright_requirements>|<critical_injection_defense>|<tooluseinstructions>|<applypatchinstructions>|<notebookinstructions>|<outputformatting>|<reminderinstructions>|<environment_info>|<workspace_info>|<userrequest>|<recently_viewed_code_snippets>|<tool calling spec>|<\|code_to_edit\|>|working directory|directory listing/i.test(
+      normalizedMessage
+    ) ||
+    (
+      normalizedMessage.length > 220 &&
+      (
+        /\bsystem prompt\b|\bsystem:\b|\btools:\b|\bthinking:\b|\bcache_control:\b|\bstream:\s*true\b|\bcurrent date is\b/i.test(
+          normalizedMessage
+        ) ||
+        /"name"\s*:\s*"computer"|"name"\s*:\s*"web_search"|"name"\s*:\s*"Task"/i.test(
+          normalizedMessage
+        )
+      )
+    )
+  );
+}
+
+function sanitizeApiErrorText(value, fallbackMessage) {
+  const safeFallback =
+    String(fallbackMessage || "Não foi possível concluir a requisição.").trim() ||
+    "Não foi possível concluir a requisição.";
+  const normalizedMessage = String(value || "").trim().replace(/\s+/g, " ").slice(0, 520);
+
+  if (!normalizedMessage) {
+    return safeFallback;
+  }
+
+  if (isLikelyPromptLeakMessage(normalizedMessage)) {
+    return safeFallback;
+  }
+
+  return normalizedMessage.slice(0, 240);
+}
+
 function normalizeApiError(payload, fallbackMessage) {
   if (payload && typeof payload.error === "string" && payload.error.trim()) {
-    return payload.error.trim();
+    return sanitizeApiErrorText(payload.error, fallbackMessage);
+  }
+
+  if (payload?.error && typeof payload.error?.message === "string" && payload.error.message.trim()) {
+    return sanitizeApiErrorText(payload.error.message, fallbackMessage);
   }
 
   return fallbackMessage;

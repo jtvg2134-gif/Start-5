@@ -16,6 +16,16 @@ const adminEssayUsersValue = document.getElementById("adminEssayUsersValue");
 const adminEssayStatusList = document.getElementById("adminEssayStatusList");
 const adminEssayThemesList = document.getElementById("adminEssayThemesList");
 const adminUsersTableBody = document.getElementById("adminUsersTableBody");
+const adminEmailAccountsValue = document.getElementById("adminEmailAccountsValue");
+const adminEmailAdminsValue = document.getElementById("adminEmailAdminsValue");
+const adminEmailActiveValue = document.getElementById("adminEmailActiveValue");
+const adminEmailRecentValue = document.getElementById("adminEmailRecentValue");
+const adminEmailList = document.getElementById("adminEmailList");
+const adminProfileAvatar = document.getElementById("adminProfileAvatar");
+const adminProfileNameValue = document.getElementById("adminProfileNameValue");
+const adminProfileEmailValue = document.getElementById("adminProfileEmailValue");
+const adminProfileRoleValue = document.getElementById("adminProfileRoleValue");
+const adminProfileFocusValue = document.getElementById("adminProfileFocusValue");
 
 const adminModalBackdrop = document.getElementById("adminModalBackdrop");
 const adminModalForm = document.getElementById("adminModalForm");
@@ -137,6 +147,20 @@ function formatAdminDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getNameInitials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+
+  if (!parts.length) {
+    return "A";
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 1).toUpperCase();
+  }
+
+  return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase();
 }
 
 function getUserById(userId) {
@@ -535,6 +559,73 @@ function renderAdminUsers(users) {
   adminUsersTableBody.replaceChildren(...rows);
 }
 
+function renderAdminEmails(users = []) {
+  const normalizedUsers = Array.isArray(users) ? users : [];
+  const activeUsers = normalizedUsers.filter((user) => Number(user.totalSessions || 0) > 0);
+  const adminUsersCount = normalizedUsers.filter((user) => user.role === "admin").length;
+  const recentUsers = [...normalizedUsers]
+    .sort((left, right) => {
+      const leftTime = new Date(left.lastSessionAt || left.createdAt || 0).getTime() || 0;
+      const rightTime = new Date(right.lastSessionAt || right.createdAt || 0).getTime() || 0;
+      return rightTime - leftTime;
+    })
+    .slice(0, 5);
+  const mostRecentAccess = recentUsers[0]?.lastSessionAt || recentUsers[0]?.createdAt || "";
+
+  if (adminEmailAccountsValue) {
+    adminEmailAccountsValue.textContent = String(normalizedUsers.length);
+  }
+
+  if (adminEmailAdminsValue) {
+    adminEmailAdminsValue.textContent = String(adminUsersCount);
+  }
+
+  if (adminEmailActiveValue) {
+    adminEmailActiveValue.textContent = String(activeUsers.length);
+  }
+
+  if (adminEmailRecentValue) {
+    adminEmailRecentValue.textContent = formatAdminDate(mostRecentAccess);
+  }
+
+  renderMetricRows(
+    adminEmailList,
+    recentUsers.map((user) => ({
+      label: `${user.name || "Sem nome"} • ${user.maskedEmail || "Privado"}`,
+      value: formatAdminDate(user.lastSessionAt || user.createdAt),
+    })),
+    "Nenhuma conta carregada ainda."
+  );
+}
+
+function renderAdminProfile() {
+  const session = window.Start5Auth?.getSession?.() || null;
+  const displayName = session?.name || [session?.firstName, session?.lastName].filter(Boolean).join(" ").trim() || "Administrador";
+  const displayEmail = session?.email || "Sem email";
+  const displayRole = session?.role === "admin" ? "Admin" : "Usuario";
+  const displayFocus = session?.focusSubjectLabel || "Sem foco definido";
+
+  if (adminProfileAvatar) {
+    adminProfileAvatar.textContent = getNameInitials(displayName);
+  }
+
+  if (adminProfileNameValue) {
+    adminProfileNameValue.textContent = displayName;
+  }
+
+  if (adminProfileEmailValue) {
+    adminProfileEmailValue.textContent = displayEmail;
+  }
+
+  if (adminProfileRoleValue) {
+    adminProfileRoleValue.textContent = displayRole;
+  }
+
+  if (adminProfileFocusValue) {
+    adminProfileFocusValue.textContent = displayFocus;
+  }
+}
+
 async function loadAdminData() {
   try {
     await window.Start5Auth?.ready;
@@ -548,10 +639,14 @@ async function loadAdminData() {
     renderAdminOverview(overviewResponse.overview || {});
     renderAdminEssayMetrics(essayMetricsResponse.metrics || {});
     renderAdminUsers(usersResponse.users || []);
+    renderAdminEmails(usersResponse.users || []);
+    renderAdminProfile();
   } catch (error) {
     console.error("Erro ao carregar admin:", error);
     renderAdminEssayMetrics({});
     renderEmptyRow("N\u00e3o foi poss\u00edvel carregar os dados do admin.");
+    renderAdminEmails([]);
+    renderAdminProfile();
   }
 }
 

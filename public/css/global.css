@@ -2833,9 +2833,10 @@ body.protected-page .page-shell > .support-copy {
 }
 
 body.protected-page .page-shell > .header {
-  position: sticky;
-  top: 24px;
+  position: relative;
+  top: auto;
   z-index: 25;
+  margin-bottom: clamp(16px, 2vw, 24px);
 }
 
 .header {
@@ -4596,8 +4597,8 @@ body.protected-page.menu-open .sidebar-footer {
 }
 
 .header {
-  position: sticky;
-  top: 18px;
+  position: relative;
+  top: auto;
   z-index: 60;
   padding-top: 0;
 }
